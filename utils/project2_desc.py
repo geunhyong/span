@@ -29,7 +29,7 @@ def cress():
     # page라는 폴더 안 project2.py를 가져오는데 별칭은 p2
     ### from page import intro
     ### import pandas as pd
-    ''')
+    
     
 
 
@@ -188,7 +188,7 @@ def cress():
     그래서 파일 페이지1(prooject1)은 자신이 있는 폴더pages 이정표 내부에서 나와 찾아다녀야 합니다. (표현이 
     그렇다는 것이지 진짜 돌아 다니지는 않습니다.) 운좋게도 폴더pages 이정표는 어디 모를 갈림길에 서 있을 거라 
     예상하던 데이터이정표와 도구이정표가 자신과 같은 길목에 있다는 걸 확인 했습니다. 
-    ###+Reboot = Streamlit Cloud에서 “최신 코드 강제 실행 버튼”이다 
+    ###+Reboot = Streamlit Cloud에서 “최신 코드 강제 실행 버튼”이다 ''')
       
 
 
