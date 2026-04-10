@@ -11,7 +11,7 @@ def desc():
 
 def asce():
     st.write('''
-    krx 지표를 가져옵니다.''')
+    krx에서 상장회사의 종목 정보를 가져옵니다.''')
 
 
 def get_data():
