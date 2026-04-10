@@ -1,13 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from io import StringIO 
+
+ 
 
 def desc():
     st.write('''
     indent가 중요하단다
     ''')
+
+def asce():
+    st.write('''
+    krx 지표를 가져옵니다.''')
 
 
 def get_data():
@@ -29,8 +33,3 @@ def takes_the_code():
         print('에러발생함 :' ,e)
         return pd.DataFrame()
 
-''' teacher instructor 김태현 
-def get_code():
-code_all = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download', header=0, encoding='euc-kr')
-df = code_all[0]
-return df '''

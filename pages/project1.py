@@ -12,8 +12,8 @@ def app():
     df=p1d.get_data()
     st.dataframe(df.iloc[:3,:3])
 
-    p1d.desc()
+    p1d.asce()
 
     df_now = p1d.takes_the_code()
-    st.dataframe(df_now)
+    st.dataframe(df_now) 
     
