@@ -17,5 +17,6 @@ def app():
     df_now = p1d.takes_the_code()
     st.dataframe(df_now) 
     
-    df=p1d.data_from_csv().head(30) 
+    df=p1d.data_from_csv___()
+    st.dataframe(df) 
     
