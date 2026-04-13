@@ -17,6 +17,13 @@ def asce():
     st.write('''
     krx에서 상장회사의 종목 정보를 가져옵니다.''')
 
+def asce1():
+    st.write('''
+    csv파일을 불러 옵니다''')
+
+
+
+
 
 def get_data():
     fn = './data/stock_px_2.csv'
@@ -65,9 +72,6 @@ def data_from__csv():
     if os.path.exists(file_path):
         df = pd.read_csv(file_path, encoding='cp949')
     return df
-
-
-
 
 
 

@@ -18,3 +18,8 @@ def app():
     p2d.momo()
 
     p2d.reapeats()
+
+    p2d.momo()
+    p2d.momo()
+    
+    p2d.repe2()

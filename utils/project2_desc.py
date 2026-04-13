@@ -214,6 +214,55 @@ def reapeats():
     ''')  
 
 
+def repe2():
+    st.write('''dataframe으로 가져 왔을 때, 열멀티인덱스 처리하기
+    read_html 특징으로 pd.read_html()은 HTML 테이블에서 <thead> 여러 줄 :; columns MultiIndex,<tbody> 첫 열 :; index 또는 일반 컬럼 
+    예시1.
+    url=r"https://finance.naver.com/item/main.naver?code=000660"
+    rep = requests.get(url)
+    확인작업
+    rep.headers 실행 구조 읽기, rep.status_code 실행 200 이면 통과 
+    rep의 또 다른 속성 .text 을 이용하여 
+    pd_rep = pd.read_html(StringIO(rep.text)) :; 하나의 파일처럼 속이는 작업
+    
+    for i , j in enumerate(pd_rep): (indent4) print( 'i : ', i , '\nj :', j ) 를 돌려서 내가 필요한 인덱스를 찾기
+    eps_sk = pd_rep[4] 요기서 type(eps_sk)) # <class 'pandas.core.frame.DataFrame'> 이다.
+    
+    그리고 print(eps_sk.columns) 를 한 결과 출력된 MultiInedx (  [ (a ,b, c) , ( d, e, f  ) , (d ,g ,h)...  ] )
+    tuple 안에 3토막 나있는 열인덱스 묶음들.
+
+    멀티인덱스도 요모조모 .loc[] , iloc[] 으로 구분해서 조회 해보자. 우선 원본은 지키는 것이 중요하니까 work_sk = eps_sk.copy()
+    rowindexstd = work_sk.iloc[:, 0]  vs  work_sk[0]  :; 지수별로 나누어진 열을 인덱스로 사용하고 싶었기에 전자가 알맞다. 
+    work_sk =  work_sk.set_index(rowindexstd)  여기서 set_index()는 컬럼을 복사해서 만드는 게 아니라 행의 기준을 바꾸기 때문에 
+    인덱스로 사용하고자 하는 부분(열부분)을 행인덱스로 구조를 바꾸어 준다! 손실되거나 복사되거나 하지 않는다는 점을 기억하자.
+
+    work_sk.index
+        출력결과 
+        Index(['매출액', '영업이익', '당기순이익', '영업이익률', '순이익률', 'ROE(지배주주)', '부채비율', '당좌비율', '유보율', 'EPS(원)', 'PER(배)', 'BPS(원)',   
+        'PBR(배)', '주당배당금(원)', '시가배당률(%)', '배당성향(%)'], dtype='object', name=('주요재무정보', '주요재무정보', '주요재무정보')) 
+    work_sk.columns
+        출력결과
+        Index(['주요재무정보_주요재무정보_주요재무정보', '최근 연간 실적_2023.12_IFRS연결',... ,'최근 분기 실적_2026.03(E)_IFRS연결'],dtype='object')
+    멀티컬럼튜플 3토막을 _으로 이어보자, work_sk.columns = [ "_".join(map(str, i)) for i in work_sk.columns ]  그랬더니, 열이름 하나하나가 엄청길어서
+    가독성이 떨어진다. 중요한 내용만 인덱스로 남겨보자. 실적구분 과 일자 만 있어도 되니까, 이번에는 str.split을 사용하려했는데 앞에서 str로 형변환을
+    해 놓았으니
+    df = work_sk.copy()
+    col_plist=[]
+    for mulcol in df.columns : 
+    d=mulcol.split('_')[:2]
+    col_pices = tuple(d)
+    col_plist.append(col_pices) 
+    그리고 for 문을 나와서 print(col_plist) 를 하면 [ (실적구분1 , 일자1 ) ,(실적구분1, 일자2) ,..., ('실적구분2' , '일자n') ]이런 식으로 출력된다.
+    그리고 col_plist를 멀티행인덱스로 만들려면 그냥 대체 시키지 말고, 꼭 df.columns = pd.MultiIndex.from_tuples( 새로운 멀티컬럼) 을 거쳐서 데이터
+    타입을 pandas.core.indexes.multi.MultiIndex 로 맞춰주어야 pandas가 인식한다. loc[] 과 iloc[] 을 쓸 때, 인덱스 중 한쪽으로도 조회가 가능하게 되니까 
+    예시2. 
+    df.xs("최근 분기 실적", level=0, axis=1) , df.loc['EPS(원)' , "최근 분기 실적"] 으로 찾아서 부분집합처럼 때어서 조회된다.
+    그래프를 그릴 때는, datetime에 자신 없으면 그냥 x 축에 들어 갈 값을 만들어 제공하는 쪽도 있다. 
+    예시3. 
+    xaixs = ['2024.12', '2025.03' ,'2025.06', '2025.09', '2025.12', '2026.03(E)']
+    확인할 것!! sort_values()가 적용되어서 정렬이 될까? 아니면 Category를 이용해야 될까? 아니면 리스트안 요소타입을 datetime으로 바꾸는 법도 괜찮
+    을 것 같다.
+    ''')
     
      
       
