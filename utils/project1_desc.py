@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
- 
-
-def desc():
+def desc1():
     st.write('''
     indent가 중요하단다
     ''')
+
 
 def asce():
     st.write('''
@@ -32,4 +32,13 @@ def takes_the_code():
     except Exception as e:   
         print('에러발생함 :' ,e)
         return pd.DataFrame()
+
+
+def get_code_name():
+    code_all = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download', header=0, encoding='utf-8')
+    columns = code_all[0].columns
+    code_name_stock_df = code_all[0][[columns[0], columns[2]]]
+    code_name_stock_df.columns = ['names', 'code']
+    code_name_stock_df['change_price'] = np.nan 
+    return code_name_stock_df
 
