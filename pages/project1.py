@@ -3,7 +3,7 @@ from utils import project1_desc as p1d
 import pandas as pd
 
 def app():
-    st.write(''' 
+    st.write('''
     ## streamlit으로 dataframe을 가져와보자
     ''')
 
@@ -21,4 +21,27 @@ def app():
     df=p1d.data_from_csv___()
     st.dataframe(df) 
     
+    df_dict_eps, df_10=p1d.get_eps(df)
+    st.dataframe(df_dict_eps)
+    st.dataframe(df_10)
+
+    df_trans = p1d.get_date_timestamp(df_dict_eps)
+    st.dataframe(df_trans)
+
+    df_trans_stock =p1d.get_stock_data(df_trans)
+    st.dataframe(df_trans_stock)
+
+   
+    figs = p1d.plots(df_trans_stock)
+    
+    for fig in figs:
+        st.pyplot(fig) 
+
+    
+
+
+
+
+
+
 
