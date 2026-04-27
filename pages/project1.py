@@ -72,11 +72,11 @@ def app():
     df_work=p1d.check_forward(tot_dfs)
 
     df_works=p1d.diff_abs_work(df_work)
-    df_work ,out_periods =p1d.check_forward2(df_works)
+    # df_work ,out_periods =p1d.check_forward2(df_works)
+    df_work ,out_periods_num_idx,df_station =p1d.check_forward2(df_works)
 
 
-
-    d_data  =p1d.carry_out_nan(df_work)
+    d_data  =p1d.carry_out_nan(df_work,out_periods_num_idx,df_station)
 
 
     #plt.rcParams['font.family'] = 'Malgun Gothic'   # 윈도우
