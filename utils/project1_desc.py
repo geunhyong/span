@@ -335,7 +335,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
-base_dir =r"C:\Users\user\OneDrive\Desktop\퀀트 1\drive-download-20260427T041452Z-3-001"
+base_dir =r"C:\Users\user\Documents\stock_ML_DL\stock_ML_DL\data"
 file_paths = glob.glob(os.path.join(base_dir,"*.csv"))
 
 print("총 csv 개수:", len(file_paths)) 
@@ -362,9 +362,6 @@ def dfs_go_dict(dfs):
     return dicts
 
 dicts=dfs_go_dict(dfs)
-#print(dicts)
-#print(len(dicts))
-#print(dicts.keys())
 
 
 def concatenates_dicts(dicts):
