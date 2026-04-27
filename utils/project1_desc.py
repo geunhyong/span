@@ -455,10 +455,11 @@ df_work ,out_periods =check_forward2(df_works)
 
 
 def carry_out_nan(df_work):
-    df_work = df_work.copy().astype(float) #**
+    df_work=df_work.reset_index()
     df_work.iloc[5607:5624 , :  ] = np.nan # ' min_out' == True 처리
     nan_rows = df_work[df_work['기온변화량(°C)'].isna()].copy()
     nan_rows.index
+    df_work=df_work.set_index('index')
     d_data = df_work['기온(°C)'].dropna().resample('h').agg(['mean', 'size' ]) 
     # Date 하루 중 쌓인 데이터의 size 와 mean 을 테이블로 만들 겠따
     d_data.columns = ['평균기온(°C)' , '데이터개수']
