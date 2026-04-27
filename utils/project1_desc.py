@@ -386,13 +386,30 @@ def dfs_go_dict(file_lists):
 dicts=dfs_go_dict(file_lists)
 
 
+def dfs_go_dict(file_lists):
+    dfs = file_lists.copy()
+    dicts={}
+    for i ,contents in enumerate(dfs):
+        contents = pd.DataFrame(contents)
+        dicts[i] = contents
+    return dicts
+
+dicts=dfs_go_dict(file_lists)
+print(dicts)
+#print(len(dicts))
+print(dicts.keys())
+
+
 
 
 def concatenates_dicts(dicts):
-    tot_dfs = pd.concat(list(dicts.values()), axis=0)
+    
+    tot_dfs = pd.concat([dicts[0],dicts[1],dicts[2],dicts[3]],axis=0)
     return tot_dfs
 
 tot_dfs = concatenates_dicts(dicts)
+
+
 
 
 
@@ -409,7 +426,6 @@ def check_forward(tot_dfs):
 df_work=check_forward(tot_dfs)
 
 
-#print( 'df_work' ,df_work)
 
 
 

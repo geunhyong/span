@@ -58,16 +58,18 @@ def app():
         st.write(i)
         st.dataframe(j)
 
-    
-    base_dir =r"C:\Users\user\OneDrive\Desktop\퀀트 1\drive-download-20260427T041452Z-3-001"
-    file_paths = glob.glob(os.path.join(base_dir,"*.csv"))
+    ##
+ 
 
+    current_file_path = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(current_file_path))
+    data_dir = os.path.join(base_dir, "data")
+    file_paths = glob.glob(os.path.join(data_dir, "OBS_ASOS_MI_*.csv"))
 
     file_lists = p1d.files_list(file_paths)
-    dfs = file_lists.copy()
 
     
-    dicts=p1d.dfs_go_dict(dfs)
+    dicts=p1d.dfs_go_dict(file_lists)
 
     tot_dfs = p1d.concatenates_dicts(dicts)
 
