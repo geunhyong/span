@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup as BS
 from io import StringIO
 import numpy as np
-import pandas_datareader.data as web
+import yfinance as yf
 import matplotlib.pyplot as plt
 import calendar
 import koreanize_matplotlib
