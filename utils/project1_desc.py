@@ -36,8 +36,9 @@ def get_code_name(url):
 	df['change_price'] = np.nan
 	return df
 
-
-fn = 'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
+base_path = os.path.dirname(os.path.abspath(__file__))
+#fn =  'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
+fn = os.path.join(base_path, '..', 'data', 'stock_name_code_ChangePrice.csv')
 def data_from_csv(fn):
 	
 	df = pd.read_csv(fn, encoding='cp949')

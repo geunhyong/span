@@ -21,8 +21,8 @@ def app():
     df1=p1d.get_code_name(url)
     st.dataframe(df1)
 
-    fn = 'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
-    
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    fn = os.path.join(base_path, '..', 'data', 'stock_name_code_ChangePrice.csv')
     df=p1d.data_from_csv(fn)
     st.dataframe(df)
     
