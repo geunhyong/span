@@ -15,11 +15,11 @@ def app():
     ## streamlit으로 dataframe을 가져와보자     
     ''')
 
-    p1d.get_code_name()
+   
     
-    
-
-    
+    url='http://kind.krx.co.kr/corpgeneral/corpList.do?method=download'
+    df1=p1d.get_code_name(url)
+    st.dataframe(df1)
 
     fn = 'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
     

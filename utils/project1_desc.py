@@ -39,10 +39,10 @@ print(f"--- 찾은 파일 개수: {len(file_paths)} ---")
 
 
 
+url='http://kind.krx.co.kr/corpgeneral/corpList.do?method=download'
 
-
-def get_code_name():
-	code_all = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download', header=0, encoding='euc-kr')
+def get_code_name(url):
+	code_all = pd.read_html(url, header=0, encoding='euc-kr')
 	columns = code_all[0].columns
 	df = code_all[0][[columns[0], columns[2]]]
 	df.columns=['names', 'code']
@@ -50,8 +50,8 @@ def get_code_name():
 	return df
 
 
-
-def data_from_csv(file_paths):
+fn = 'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
+def data_from_csv(fn):
 	fn =file_paths
 	df = pd.read_csv(fn, encoding='cp949')
 	df = df.iloc[:, 1:]
@@ -59,7 +59,7 @@ def data_from_csv(file_paths):
 	return df
 
 
-df=data_from_csv(file_paths)
+df=data_from_csv(fn)
 
 def orderly(df) :
     df['change_price'] = pd.to_numeric(df['change_price'], errors='coerce') # 문자열이라 비교해서 정렬 못할 수 있으니까
