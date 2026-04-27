@@ -461,7 +461,7 @@ df_work ,out_periods_num_idx,df_station =check_forward2(df_works)
 
 
 
-def carry_out_nan(df_work,out_periods_num_idx):
+def carry_out_nan(df_work,out_periods_num_idx,df_station):
     con_num = out_periods_num_idx
     con_num[0] 
     con_num[-1] 
@@ -484,7 +484,7 @@ def carry_out_nan(df_work,out_periods_num_idx):
     d_data['지점명'] = df_station
     return d_data
 
-d_data  =carry_out_nan(df_work,out_periods_num_idx)
+d_data  =carry_out_nan(df_work,out_periods_num_idx,df_station)
 
 
 #%% graph
