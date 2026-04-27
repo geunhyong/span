@@ -477,25 +477,23 @@ def carry_out_nan(df_work):
 
 
 def carry_out_nan(df_work):
-    df_work=df_work.reset_index()
-    df_work.iloc[5607:5624 , :  ] = np.nan # ' min_out' == True 처리
-    nan_rows = df_work[df_work['기온변화량(°C)'].isna()].copy()
-    nan_rows.index
-    df_work=df_work.set_index('index')
-    d_data = df_work['기온(°C)'].dropna().resample('h').agg(['mean', 'size' ]) 
-    # Date 하루 중 쌓인 데이터의 size 와 mean 을 테이블로 만들 겠따
-    d_data.columns = ['평균기온(°C)' , '데이터개수']
-    # d_data['데이터개수'].unique()#Out[347]: array([58, 60, 43,  1])
-    # q = d_data['데이터개수'] == 43
-    # len(q)#97개 
-    d_data.loc[d_data['데이터개수'] <2 ,  : '평균기온(°C)'    ] =np.nan 
-    d_data.loc[d_data['데이터개수'] <48 ,  : '평균기온(°C)'    ] =np.nan 
-    nan_check = d_data[d_data['평균기온(°C)'].isna()]
-    # nan_check.index
-    print(f"결측 처리된 시간대 수: {len(nan_check)}개")
-    return d_data
+    df_work = df_work.reset_index()
+    
+    target_cols = ['기온(°C)', '기온변화량(°C)']
+    for col in target_cols:
+        if col in df_work.columns:
+            df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
 
-d_data  =carry_out_nan(df_work)
+    df_work.loc[5607:5623, '기온(°C)'] = np.nan
+    df_work = df_work.set_index('index')
+
+    d_data = df_work['기온(°C)'].resample('h').agg(['mean', 'size'])
+    d_data.columns = ['평균기온(°C)', '데이터개수']
+
+    d_data.loc[d_data['데이터개수'] < 48, '평균기온(°C)'] = np.nan
+    
+    return d_data
+d_data=carry_out_nan(df_work)
 
 
 
