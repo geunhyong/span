@@ -368,8 +368,8 @@ dicts=dfs_go_dict(dfs)
 
 
 def concatenates_dicts(dicts):
-    
-    tot_dfs = pd.concat([dicts[0],dicts[1],dicts[2],dicts[3]],axis=0)
+    if isinstance(dicts, dict):
+        tot_dfs = pd.concat(dicts.values(), axis=0)
     return tot_dfs
 
 tot_dfs = concatenates_dicts(dicts)
