@@ -436,70 +436,58 @@ def check_forward2(df_works):
     df_cal.unique()
     df_cal=df_cal.reset_index()
     df_cal['step_sum_60minutes'] = df_cal['변화절댓값'].rolling(window=60).sum()
-    df_cal['is_out'] = df_cal['step_sum_60minutes'] < 0.1
-    out_periods = df_cal[df_cal['is_out'] == True]
+    df_cal['min_out'] = df_cal['step_sum_60minutes'] < 0.1
+
+    out_periods = df_cal[df_cal['min_out'] == True]
+ 
     df_cal=df_cal.set_index('index')
     df_works = df_works.drop(['변화절댓값'], axis=1)
+    #df_work ['지점명', '기온(°C)', '기온변화량(°C)', '변화절댓값']
+    #df_cal ['변화절댓값', 'step_sum_60minutes', 'min_out'] 
+    
     df_work = pd.concat([df_works, df_cal] ,axis=1).copy()
-    part_of_theD = df_work['is_out']
-    df_work = df_work.drop('is_out', axis=1)
-    df_work['min_out'] = part_of_theD
-    return df_work ,out_periods
+    df_work = df_work.drop('min_out', axis=1)
+    df_station = df_work['지점명']
+    df_work = df_work.drop('지점명', axis=1)
     
-df_work ,out_periods =check_forward2(df_works)
+    return df_work ,out_periods.index,df_station
+
+    
+df_work ,out_periods_num_idx,df_station =check_forward2(df_works)
 
 
-def carry_out_nan(df_work):
-    df_work = df_work.reset_index()
-    df_work = df_work.astype(object)
-    #이제 iloc으로 NaN을 할당해도 에러가 나지 않습니다.
-    df_work.iloc[5607:5624, :] = np.nan 
-    
+
+
+
+
+
+def carry_out_nan(df_work,out_periods_num_idx):
+    con_num = out_periods_num_idx
+    con_num[0] 
+    con_num[-1] 
+    df_work=df_work.reset_index()
+    df_work.iloc[con_num[0] : con_num[-1] , :  ] = np.nan # ' min_out' == True 처리
     nan_rows = df_work[df_work['기온변화량(°C)'].isna()].copy()
-    print(f"NaN 처리된 인덱스들: {nan_rows.index.tolist()}")
-    
-    df_work = df_work.set_index('index')
-    
-    df_work['기온(°C)'] = pd.to_numeric(df_work['기온(°C)'], errors='coerce')
-    
-    d_data = df_work['기온(°C)'].dropna().resample('h').agg(['mean', 'size'])
-    d_data.columns = ['평균기온(°C)', '데이터개수']
-    
-    d_data.loc[d_data['데이터개수'] < 2, '평균기온(°C)'] = np.nan
-    d_data.loc[d_data['데이터개수'] < 48, '평균기온(°C)'] = np.nan
-    
+    print(nan_rows.index)
+    df_work=df_work.set_index('index')
+    d_data = df_work['기온(°C)'].dropna().resample('h').agg(['mean', 'size' ]) 
+    # Date 하루 중 쌓인 데이터의 size 와 mean 을 테이블로 만들 겠따
+    d_data.columns = ['평균기온(°C)' , '데이터개수']
+    # d_data['데이터개수'].unique()#Out[347]: array([58, 60, 43,  1])
+    # q = d_data['데이터개수'] == 43
+    # len(q)#97개 
+    d_data.loc[d_data['데이터개수'] <2 ,  : '평균기온(°C)'    ] =np.nan 
+    d_data.loc[d_data['데이터개수'] <48 ,  : '평균기온(°C)'    ] =np.nan 
     nan_check = d_data[d_data['평균기온(°C)'].isna()]
+    # nan_check.index
     print(f"결측 처리된 시간대 수: {len(nan_check)}개")
-    
+    d_data['지점명'] = df_station
     return d_data
 
+d_data  =carry_out_nan(df_work,out_periods_num_idx)
 
 
-
-def carry_out_nan(df_work):
-    df_work = df_work.reset_index()
-    
-    target_cols = ['기온(°C)', '기온변화량(°C)']
-    for col in target_cols:
-        if col in df_work.columns:
-            df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
-
-    df_work.loc[5607:5623, '기온(°C)'] = np.nan
-    df_work = df_work.set_index('index')
-
-    d_data = df_work['기온(°C)'].resample('h').agg(['mean', 'size'])
-    d_data.columns = ['평균기온(°C)', '데이터개수']
-
-    d_data.loc[d_data['데이터개수'] < 48, '평균기온(°C)'] = np.nan
-    
-    return d_data
-d_data=carry_out_nan(df_work)
-
-
-
-
-
-
+#%% graph
 
 
 plt.rcParams['font.family'] = 'Malgun Gothic'   # 윈도우
