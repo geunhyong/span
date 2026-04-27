@@ -12,6 +12,33 @@ import koreanize_matplotlib
 #from dateutil.relativedelta import relativedelta as rtd
 from scipy.stats import norm
 from scipy import stats
+import pandas as pd
+import glob
+import os
+import matplotlib.font_manager as fm
+import matplotlib.dates as mdates
+
+
+
+# 1. 현재 파일(project1_desc.py)의 절대 경로를 가져옵니다.
+current_file_path = os.path.abspath(__file__)
+
+# 2. utils 폴더에서 한 단계 위인 프로젝트 루트(span 또는 stock_ML_DL)로 올라갑니다.
+# os.path.dirname을 두 번 쓰면 한 단계 위로 올라갑니다.
+base_dir = os.path.dirname(os.path.dirname(current_file_path))
+
+# 3. 루트 폴더 아래에 있는 'data' 폴더 경로를 생성합니다.
+data_dir = os.path.join(base_dir, "data")
+file_paths = glob.glob(os.path.join(data_dir, "'stock_name_code_ChangePrice.csv"))
+
+print(f"--- 프로젝트 루트 경로: {base_dir} ---")
+print(f"--- 데이터 폴더 경로: {data_dir} ---")
+print(f"--- 찾은 파일 개수: {len(file_paths)} ---")
+
+
+
+
+
 
 
 def get_code_name():
@@ -24,16 +51,15 @@ def get_code_name():
 
 
 
-
-def data_from_csv(fn):
-	#file_name = './data/'+'stock_name_code_ChangePrice.csv'
+def data_from_csv(file_paths):
+	fn =file_paths
 	df = pd.read_csv(fn, encoding='cp949')
 	df = df.iloc[:, 1:]
 	df.columns=['names', 'code', 'change_price']
 	return df
 
 
-
+df=data_from_csv(file_paths)
 
 def orderly(df) :
     df['change_price'] = pd.to_numeric(df['change_price'], errors='coerce') # 문자열이라 비교해서 정렬 못할 수 있으니까
@@ -328,14 +354,6 @@ def plots(df):
 
 
 #%%
-import pandas as pd
-import glob
-import os
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-import matplotlib.dates as mdates
 
 
 
