@@ -335,8 +335,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
+
+
 base_dir =r"C:\Users\user\Documents\stock_ML_DL\stock_ML_DL\data"
-file_paths = glob.glob(os.path.join(base_dir,"*.csv"))
+file_paths = glob.glob(os.path.join(base_dir,"OBS_ASOS_MI_*.csv"))
 
 print("총 csv 개수:", len(file_paths)) 
 
