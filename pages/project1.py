@@ -1,47 +1,100 @@
 import streamlit as st
 from utils import project1_desc as p1d
 import pandas as pd
-
+import glob
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import matplotlib.dates as mdates
+    
 def app():
     st.write('''
-    ## streamlit으로 dataframe을 가져와보자
+    ## streamlit으로 dataframe을 가져와보자     
     ''')
 
-    p1d.desc1()
+    p1d.get_code_name()
     
-    df=p1d.get_data()
-    st.dataframe(df.iloc[:3,:3])
+    
 
-    p1d.asce()
+    
 
-    df_now = p1d.takes_the_code()
-    st.dataframe(df_now) 
+    fn = 'C:\\Users\\user\\Documents\\stock_ML_DL\\stock_ML_DL\\data\\stock_name_code_ChangePrice.csv'
     
-    p1d.asce1()
-    df=p1d.data_from_csv___()
-    st.dataframe(df) 
+    df=p1d.data_from_csv(fn)
+    st.dataframe(df)
     
-    df_dict_eps, df_10=p1d.get_eps(df)
-    st.dataframe(df_dict_eps)
+    codelist, df_10  = p1d.orderly(df)   
+    
     st.dataframe(df_10)
+    #st.markdown(f"리스트 값: {codelist}")
+    #st.text(codelist)
 
-    df_trans = p1d.get_date_timestamp(df_dict_eps)
-    st.dataframe(df_trans)
+    urlList = p1d.get_url_list(codelist)
 
-    df_trans_stock =p1d.get_stock_data(df_trans)
-    st.dataframe(df_trans_stock)
+    soups =p1d.get_soup_list(urlList)
 
-   
-    figs = p1d.plots(df_trans_stock)
+    catch_before, catch_close  = p1d.close_and_before_val_extract_fromNaver(soups)    
+    all_table=p1d.extract_data(soups)
     
-    for fig in figs:
+    
+    
+
+    df_10names , df_10change_price =p1d.df_gets_names(df_10)
+    
+    dict_DF10 =p1d.change_soups_Dframes(all_table, df_10)  
+  
+    final_dict = p1d.date_transform(dict_DF10)
+
+
+
+
+    fine_dict =p1d.get_framework(final_dict, catch_before, catch_close)
+    
+        
+    for i ,j in fine_dict.items():
+        st.write(i)
+        st.dataframe(j)
+
+    
+    base_dir =r"C:\Users\user\OneDrive\Desktop\퀀트 1\drive-download-20260427T041452Z-3-001"
+    file_paths = glob.glob(os.path.join(base_dir,"*.csv"))
+
+
+    file_lists = p1d.files_list(file_paths)
+    dfs = file_lists.copy()
+
+    
+    dicts=p1d.dfs_go_dict(dfs)
+
+    tot_dfs = p1d.concatenates_dicts(dicts)
+
+    df_work=p1d.check_forward(tot_dfs)
+
+    df_works=p1d.diff_abs_work(df_work)
+    df_work ,out_periods =p1d.check_forward2(df_works)
+
+
+
+    d_data  =p1d.carry_out_nan(df_work)
+
+
+    #plt.rcParams['font.family'] = 'Malgun Gothic'   # 윈도우
+    #plt.rcParams['axes.unicode_minus'] = False
+
+    fig=p1d.data_mean_plot(d_data)
+    st.pyplot(fig)    
+
+    days_df = p1d.apply_interpolate_step(d_data)
+
+    fig2=p1d.method_plots(days_df)
+    st.pyplot(fig2)
+    #모듈이 준 결과물을 st.pyplot(), st.write(), st.table()
+
+    targets = [ 'interpolates_linear', 'interpolates_quadratic','interpolates_cubic']
+    for m in targets:
+        fig = p1d.d_data_source(d_data,m)
         st.pyplot(fig) 
-
-    
-
-
-
-
 
 
 
