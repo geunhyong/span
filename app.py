@@ -1,7 +1,6 @@
 import streamlit as st
 from pages import project1 as p1
 from pages import project2 as p2
-from pages import client as cl
 from pages import intro
 
 st.title('글쓰기공간')
