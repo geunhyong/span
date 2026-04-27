@@ -5,7 +5,7 @@ from pages import intro
 
 st.title('글쓰기공간')
 
-item_list = ['item0','item1', 'item2','item3']
+item_list = ['item0','item1', 'item2']
 
 item_labels = {'item0':'소개하는', 'item1':'연습하는', 'item2':'메모하는'}
 
