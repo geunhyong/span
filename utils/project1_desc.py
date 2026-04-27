@@ -449,7 +449,29 @@ def check_forward2(df_works):
 df_work ,out_periods =check_forward2(df_works)
 
 
-
+def carry_out_nan(df_work):
+    df_work = df_work.reset_index()
+    df_work = df_work.astype(object)
+    #이제 iloc으로 NaN을 할당해도 에러가 나지 않습니다.
+    df_work.iloc[5607:5624, :] = np.nan 
+    
+    nan_rows = df_work[df_work['기온변화량(°C)'].isna()].copy()
+    print(f"NaN 처리된 인덱스들: {nan_rows.index.tolist()}")
+    
+    df_work = df_work.set_index('index')
+    
+    df_work['기온(°C)'] = pd.to_numeric(df_work['기온(°C)'], errors='coerce')
+    
+    d_data = df_work['기온(°C)'].dropna().resample('h').agg(['mean', 'size'])
+    d_data.columns = ['평균기온(°C)', '데이터개수']
+    
+    d_data.loc[d_data['데이터개수'] < 2, '평균기온(°C)'] = np.nan
+    d_data.loc[d_data['데이터개수'] < 48, '평균기온(°C)'] = np.nan
+    
+    nan_check = d_data[d_data['평균기온(°C)'].isna()]
+    print(f"결측 처리된 시간대 수: {len(nan_check)}개")
+    
+    return d_data
 
 
 
