@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import calendar
 import koreanize_matplotlib
 #from dateutil.relativedelta import relativedelta as rtd
-Import scipy
+from scipy.stats import norm
+from scipy import stats
 
 
 def get_code_name():

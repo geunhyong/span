@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
-Import scipy
+from scipy.stats import norm
+from scipy import stats
 
 def app():
     st.write('''
