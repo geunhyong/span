@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
-    
+Import scipy
+
 def app():
     st.write('''
     ## streamlit으로 dataframe을 가져와보자     
