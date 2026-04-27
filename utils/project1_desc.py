@@ -337,20 +337,38 @@ import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
 
 
-base_dir =r"C:\Users\user\Documents\stock_ML_DL\stock_ML_DL\data"
-file_paths = glob.glob(os.path.join(base_dir,"OBS_ASOS_MI_*.csv"))
 
-print("총 csv 개수:", len(file_paths)) 
 
+# 1. 현재 파일(project1_desc.py)의 절대 경로를 가져옵니다.
+current_file_path = os.path.abspath(__file__)
+
+# 2. utils 폴더에서 한 단계 위인 프로젝트 루트(span 또는 stock_ML_DL)로 올라갑니다.
+# os.path.dirname을 두 번 쓰면 한 단계 위로 올라갑니다.
+base_dir = os.path.dirname(os.path.dirname(current_file_path))
+
+# 3. 루트 폴더 아래에 있는 'data' 폴더 경로를 생성합니다.
+data_dir = os.path.join(base_dir, "data")
+
+# 4. 해당 폴더에서 OBS_ASOS_MI_로 시작하는 모든 csv 파일을 찾습니다.
+file_paths = glob.glob(os.path.join(data_dir, "OBS_ASOS_MI_*.csv"))
+
+# [확인용 출력] 서버 로그(Manage app)에서 이 숫자가 0이 아닌지 꼭 확인하세요!
+print(f"--- 프로젝트 루트 경로: {base_dir} ---")
+print(f"--- 데이터 폴더 경로: {data_dir} ---")
+print(f"--- 찾은 파일 개수: {len(file_paths)} ---")
 
 def files_list(file_paths):
-    file_lists =[]
+    if not file_paths:
+        return []
+    
+    file_lists = []
     for i in file_paths:
-        dfs = pd.read_csv(i , parse_dates=[0] , index_col = [0], encoding='cp949')
-        print(dfs)
+        # 파일 읽기 (인코딩 주의: cp949)
+        dfs = pd.read_csv(i, parse_dates=[0], index_col=[0], encoding='cp949')
         file_lists.append(dfs)
     return file_lists
 
+# 데이터 리스트 생성
 file_lists = files_list(file_paths)
 dfs = file_lists.copy()
 
