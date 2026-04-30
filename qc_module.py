@@ -40,7 +40,7 @@ def apply_qc_logic(df, physical_range=(-40, 60), step_limit=3.0, consistency_lim
 
     # 3. 단계 검사 (현재 - 1분전)
     # diff 계산 시 결측치가 있으면 그 다음 유효 데이터와의 차이를 계산하지 않도록 유의
-    temp_diff = qc_df['temp'].diff()
+    temp_diff = qc_df['temp'].diff() #.abs() 계산은 diff 이후에 수행하여 절대값으로 비교
     qc_df.loc[temp_diff.abs() > step_limit, 'temp'] = np.nan
 
     # 4. 지속성 검사 (60분간 변화량 절대값의 합)
