@@ -24,11 +24,11 @@ def prepare_prophet_data(df):
     return prophet_df
 
 def run_prophet_forecast(prophet_df, periods=30):
-    """Prophet 모델을 학습하고 미래를 예측합니다."""
+    """Prophet 015760모델을 학습하고 미래를 예측합니다."""
     model = Prophet(daily_seasonality=False) # type: ignore
     model.fit(prophet_df)
     
-    future = model.make_future_dataframe(periods=periods)
+    future = model.make_future_dataframe(periods=periods,freq='B')
     forecast = model.predict(future)
     
     return model, forecast
