@@ -2,8 +2,9 @@
 import streamlit as st
 import os
 from prophet.plot import plot_plotly, plot_components_plotly
-
-# 두 개의 모듈을 모두 불러옵니다.
+# ### 근형  
+# cf git push here _ add
+# 두 개의 모듈을 모두 불러옵니다.  
 import qc_module as qm
 import prophet_module as pm
 
