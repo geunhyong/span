@@ -2,7 +2,7 @@
 import streamlit as st
 import os
 from prophet.plot import plot_plotly, plot_components_plotly
-#나는 감자왕국의 감자왕 쟈감 감자 감자
+#나는 감자왕국의 감자왕 쟈감 감자 감자 감자감자
 
 # 두 개의 모듈을 모두 불러옵니다.
 import qc_module as qm
