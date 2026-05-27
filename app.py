@@ -2,8 +2,8 @@
 import streamlit as st
 import os
 from prophet.plot import plot_plotly, plot_components_plotly
-###################################추주원
-# git push here
+#나는 감자왕국의 감자왕 쟈감 감자 감자 감자감자
+
 # 두 개의 모듈을 모두 불러옵니다.
 import qc_module as qm
 import prophet_module as pm
@@ -137,3 +137,4 @@ elif menu == "📈 주식 가격 예측":
                     st.success(f"✨ 최근 6개월 내 골든 크로스 발생일: **{', '.join(golden_crosses)}**")
                 else:
                     st.info("📉 최근 6개월 내 골든 크로스(MA5 상향 돌파)가 발생하지 않았습니다.")
+#나는 감자왕국의 왕감자 입니다.f
