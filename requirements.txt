@@ -4,3 +4,8 @@ numpy
 prophet
 finance-datareader
 plotly
+statsmodels
+xgboost
+scikit-learn
+joblib
+yfinance

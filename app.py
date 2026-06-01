@@ -1,140 +1,158 @@
 # app.py
 import streamlit as st
-import os
-from prophet.plot import plot_plotly, plot_components_plotly
-#나는 감자왕국의 감자왕 쟈감 감자 감자 감자감자
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-# 두 개의 모듈을 모두 불러옵니다.
-import qc_module as qm
-import prophet_module as pm
+from modules.data_fetcher import get_recent_data
+from modules.predictor import QuantPredictor
 
-# 페이지 기본 설정 (가장 위에 있어야 합니다)
-st.set_page_config(page_title="AI Quant 통합 대시보드", layout="wide")
+# =====================================================================
+# 1. 페이지 세팅 및 객체 로드
+# =====================================================================
+st.set_page_config(page_title="AI 퀀트 다중 모델 대시보드", page_icon="📈", layout="wide")
 
-# ==========================================
-# 사이드바: 내비게이션 메뉴 구성
-# ==========================================
-st.sidebar.title("🧭 내비게이션")
-menu = st.sidebar.radio("이동할 페이지를 선택하세요:", ["🌡️ 기상 데이터 QC", "📈 주식 가격 예측"])
+@st.cache_resource
+def load_ai_model():
+    return QuantPredictor()
 
-st.sidebar.divider() # 시각적 구분선
+try:
+    predictor = load_ai_model()
+    model_loaded = True
+except Exception as e:
+    model_loaded = False
+    st.error(f"🚨 모델 로드 실패: {e}")
 
-# ==========================================
-# 페이지 1: 기상 데이터 QC
-# ==========================================
-if menu == "🌡️ 기상 데이터 QC":
-    st.title("🌡️ 기상 정보 데이터 처리 및 QC 대시보드")
-    
-    # --- 기존 app.py에 있던 사이드바 설정 ---
-    data_path = st.sidebar.text_input("데이터 디렉토리 경로", "./data/seoul_weather/")
-    run_button = st.sidebar.button("QC 분석 실행")
-    
-    if run_button:
-        if not os.path.exists(data_path):
-            st.error(f"경로를 찾을 수 없습니다: {data_path}")
-        else:
-            with st.spinner("데이터를 불러오고 QC를 수행 중입니다..."):
-                raw_df = qm.load_all_csv(data_path)
-                
-                if raw_df.empty:
-                    st.warning("데이터가 비어있습니다.")
-                else:
-                    clean_df = qm.apply_qc_logic(raw_df)
-                    means = qm.get_aggregated_data(clean_df)
-                    
-                    # (이곳에 기존에 작성하셨던 st.header, st.line_chart, 탭 구성, 
-                    # 출근시간 심층 분석 등의 코드를 그대로 붙여넣으시면 됩니다!)
-                    st.success("기상 데이터 QC 완료! (기존 시각화 코드 적용 위치)")
+# =====================================================================
+# 2. 사이드바 (Control Panel)
+# =====================================================================
+st.sidebar.title("⚙️ 리서치 제어반")
+asset_choice = st.sidebar.selectbox("📊 분석 자산", ["삼성전자", "코스피", "비트코인"])
 
-# ==========================================
-# 페이지 2: 주식 가격 예측 (Prophet)
-# ==========================================
-# ==========================================
-# 페이지 2: 주식 가격 예측 (Prophet)
-# ==========================================
-elif menu == "📈 주식 가격 예측":
-    st.title("📈 Prophet 활용 주식 종가(Close) 예측")
-    
-    # ==========================================
-    # ✨ [신규] 검색 히스토리 (Session State) 관리
-    # ==========================================
-    st.sidebar.subheader("🔍 종목 설정")
-    
-    # 1. 메모리(히스토리 저장소) 초기화: 앱에 처음 접속했을 때 한 번만 실행됨
-    if 'ticker_history' not in st.session_state:
-        st.session_state.ticker_history = ["005930"] # 기본값: 삼성전자
-        
-    # 2. 히스토리 선택 박스 (메모리에 저장된 리스트를 보여줌)
-    selected_ticker = st.sidebar.selectbox(
-        "최근 검색 종목에서 선택", 
-        st.session_state.ticker_history
-    )
-    
-    # 3. 새로운 종목 입력칸
-    new_ticker = st.sidebar.text_input("새 종목 직접 입력 (예: 015760)", "")
-    
-    # 4. 최종 실행할 종목 결정 (사용자가 새로 입력한 값이 있으면 그것을 최우선으로 사용!)
-    ticker = new_ticker if new_ticker else selected_ticker
-    
-    run_prophet = st.sidebar.button("주식 예측 실행")
-    
-    if run_prophet:
-        # --- 검색 기록 업데이트 로직 ---
-        # 이미 검색했던 종목이면 리스트에서 뺐다가 맨 앞으로 다시 넣음 (최신화)
-        if ticker in st.session_state.ticker_history:
-            st.session_state.ticker_history.remove(ticker)
-        st.session_state.ticker_history.insert(0, ticker)
-        
-        # 무한정 길어지지 않도록 최근 10개까지만 유지
-        st.session_state.ticker_history = st.session_state.ticker_history[:10]
-        
-        # --------------------------------
-        
-        with st.spinner(f"종목코드 [{ticker}] 데이터 수집 및 예측 중..."):
-            # 1. 모듈에서 데이터 불러오기
-            df, start_date, today = pm.fetch_stock_data(ticker, years=5)
+st.sidebar.divider()
+st.sidebar.markdown("**🤖 AI 모델 선택 (A/B/C)**")
+model_choice = st.sidebar.radio(
+    "적용할 연구 모델을 선택하세요:",
+    options=["A", "B", "C"],
+    format_func=lambda x: {
+        "A": "Model A (PCA 통합 심리)",
+        "B": "Model B (세부 잔차 분리) 🏆",
+        "C": "Model C (전체 혼용)"
+    }[x]
+)
+
+analyze_btn = st.sidebar.button("실시간 분석 실행 🚀")
+
+st.title("📈 AI 퀀트: 투자자 심리 기반 다중 모델 대시보드")
+st.markdown("회의록 [4장 연구 설계]에 따른 Model A, B, C의 실시간 예측을 비교합니다.")
+st.divider()
+
+# =====================================================================
+# 3. 메인 로직
+# =====================================================================
+if analyze_btn and model_loaded:
+    with st.spinner(f'{asset_choice} 실시간 데이터 수집 및 {model_choice} 모델 추론 중...'):
+        try:
+            df_recent = get_recent_data(asset_choice)
+            result = predictor.get_prediction(asset_choice, df_recent, model_type=model_choice)
+            df_plot = result['df_plot']
+            curr_data = result['current_data']
             
-            # ... (이하 기존 데이터 처리 및 그래프 그리는 로직 그대로 유지) ...            
-            if df is None:
-                st.error("데이터를 불러오는 데 실패했습니다.")
-            else:
-                # [신규 추가] 이동평균선 산출 및 시각화
-                ma_df = pm.add_moving_averages(df)
-                
-
-                # 2. 모듈에서 예측 수행
-                prophet_df = pm.prepare_prophet_data(df)
-                model, forecast = pm.run_prophet_forecast(prophet_df, periods=30)
-                
-                # 3. 화면 표출 (클라이언트의 역할)
-                st.subheader(f"📊 종목명: {pm.get_stock_name(ticker)} (종목코드: {ticker}) (학습 기간: {start_date} ~ {today})")
-                
-                st.subheader("미래 30일 예측 그래프")
-                fig1 = plot_plotly(model, forecast)
-
-
-                # 개선 1: Range Slider를 끄면, 사용자가 드래그해서 확대할 때 Y축이 자동으로 맞춰집니다!
-                fig1.update_layout(xaxis_rangeslider_visible=False)
-                # 개선 2: 메인 차트에서 주말(토, 일)의 빈 공간(Gap)을 완전히 잘라냅니다.
-                fig1.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-                fig1.update_layout(xaxis_title="날짜", yaxis_title="종가 (원)", showlegend=False)
+            # 모델별 성과 매핑 (train_pipeline.py 테스트 결과 기준)
+            da_scores = {"A": 52.94, "B": 56.30, "C": 55.46}
+            
+            # -------------------------------------------------------------
+            # UI: 섹션 1 (투자자 심리 분석)
+            # -------------------------------------------------------------
+            st.header(f"🔍 [섹션 1] {asset_choice} 투자자 심리 지표 분석")
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                st.subheader("주가 vs 심리지수 흐름 (최근 6개월)")
+                fig1 = make_subplots(specs=[[{"secondary_y": True}]])
+                fig1.add_trace(go.Scatter(x=df_plot.index, y=df_plot['Close'], name="종가", line=dict(color="#00BFFF", width=2)), secondary_y=False)
+                fig1.add_trace(go.Scatter(x=df_plot.index, y=df_plot['Investor_Sentiment_PC1'], name="통합 심리지수(PC1)", line=dict(color="#FF4500", dash='dot')), secondary_y=True)
+                fig1.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig1, width='stretch')
 
-
-                st.subheader("예측 성분 분석 (Components)")
-                fig2 = plot_components_plotly(model, forecast)
-
-                st.plotly_chart(fig2, width='stretch')
-
-                st.markdown("##### 📈 최근 6개월 주가 및 이동평균선 (MA)")
-                # 차트를 보기 좋게 하기 위해 최근 180일 데이터만 슬라이싱
-                # 'Close'와 세 개의 MA 컬럼만 선택하여 라인 차트로 그립니다.
-                recent_ma_df = ma_df.tail(180)[['Close', 'MA5', 'MA20', 'MA60']]
-                st.line_chart(recent_ma_df)
-
-                golden_crosses = pm.find_golden_cross(ma_df)
-                if golden_crosses:
-                    st.success(f"✨ 최근 6개월 내 골든 크로스 발생일: **{', '.join(golden_crosses)}**")
+            with col2:
+                # 선택된 모델에 따라 다른 차트를 보여줌
+                if model_choice == "A":
+                    st.subheader("PCA 지표 가중치")
+                    labels = ['MFI (추세)', 'Stochastic (단기)', 'NATR (충격)']
+                    fig2 = go.Figure(data=[go.Pie(labels=labels, values=[0.688, 0.677, 0.259], hole=.5, marker_colors=['#00D2FF', '#3A7BD5', '#FF416C'])])
+                    fig2.update_layout(height=350, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=-0.2))
+                    st.plotly_chart(fig2, width='stretch')
                 else:
-                    st.info("📉 최근 6개월 내 골든 크로스(MA5 상향 돌파)가 발생하지 않았습니다.")
-#나는 감자왕국의 왕감자 입니다.f
+                    st.subheader("현재 주간(Week) 순수 심리 잔차 (상대 강도)")
+                    st.markdown("지표 간 스케일 왜곡을 방지하기 위해, **최근 6개월 내 최댓값 대비 현재 잔차의 비율(-1.0 ~ 1.0)**을 시각화합니다.")
+                    x_labels = ['ATR 잔차', 'MFI 잔차', 'STOCH 잔차']
+                    
+                    # 1. 훈련용 글로벌 스케일러 대신, 시각화 전용 원본 잔차 가져오기
+                    raw_vals = [curr_data['ATR_10_res'], curr_data['MFI_10_res'], curr_data['STOCHk_10_3_3_res']]
+                    
+                    # 2. Local MaxAbs Scaling (최근 6개월 데이터 기준 절댓값의 최댓값 구하기)
+                    local_max = [
+                        df_plot['ATR_10_res'].abs().max(),
+                        df_plot['MFI_10_res'].abs().max(),
+                        df_plot['STOCHk_10_3_3_res'].abs().max()
+                    ]
+                    
+                    # 3. 현재 잔차를 최댓값으로 나누어 -1.0 ~ 1.0 사이의 비율(%)로 변환
+                    y_vals = [v / m if m != 0 else 0 for v, m in zip(raw_vals, local_max)]
+                    
+                    colors = ['#FF416C' if v < 0 else '#00D2FF' for v in y_vals]
+                    
+                    fig2 = go.Figure(data=[go.Bar(
+                        x=x_labels, 
+                        y=y_vals, 
+                        marker_color=colors,
+                        text=[f"{v:.2f}" for v in y_vals], # 막대 위에 -1.0 ~ 1.0 비율 표시
+                        textposition='auto'
+                    )])
+                    fig2.update_layout(
+                        height=350, 
+                        margin=dict(l=0, r=0, t=20, b=0),
+                        yaxis=dict(range=[-1.1, 1.1]) # Y축을 -1.1 ~ 1.1로 고정하여 직관성 확보
+                    )
+                    st.plotly_chart(fig2, width='stretch')
+
+            st.divider()
+
+            # -------------------------------------------------------------
+            # UI: 섹션 2 (AI 주가 방향 예측)
+            # -------------------------------------------------------------
+            st.header(f"🤖 [섹션 2] Model {model_choice} 주가 방향 예측")
+            
+            col3, col4, col5 = st.columns(3)
+            with col3:
+                st.info(f"💡 Model {model_choice} 백테스트 성능")
+                st.metric(label="방향 정확도 (DA)", value=f"{da_scores[model_choice]} %", delta="검증 완료", delta_color="normal")
+
+            with col4:
+                direction_txt = "상승 (UP) 🚀" if result['direction'] == "UP" else "하락 (DOWN) 🔻"
+                color = "normal" if result['direction'] == "UP" else "inverse"
+                
+                st.success(f"💡 다음 주 예측 결과")
+                st.metric(label="AI 예측 방향", value=direction_txt, 
+                          delta=f"예상 로그수익률: {result['pred_log_return']*100:.2f}%", delta_color=color)
+
+            with col5:
+                st.subheader("예측 강도 (Signal Strength)")
+                strength = min(abs(result['pred_log_return']) * 100 * 20, 100) 
+                fig3 = go.Figure(go.Indicator(
+                    mode = "gauge+number",
+                    value = strength,
+                    title = {'text': "AI 확신도"},
+                    gauge = {'axis': {'range': [None, 100]},
+                             'bar': {'color': "#FF416C" if result['direction'] == "DOWN" else "#00D2FF"}}
+                ))
+                fig3.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
+                st.plotly_chart(fig3, width='stretch')
+
+        except Exception as e:
+            st.error(f"데이터 처리 중 오류가 발생했습니다: {e}")
+            st.stop()
+else:
+    if model_loaded:
+        st.info("👈 좌측 제어반에서 분석할 자산과 모델(A/B/C)을 선택하고 실행을 눌러주세요.")
