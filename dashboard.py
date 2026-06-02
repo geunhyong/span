@@ -1247,30 +1247,29 @@ def render_log_section(context):
 
 
 
-import all_might
+
 
 
 ### 데이터 가져오기
-#   조원들의 엔진에서 데이터를 불러오는 함수
+
 def load_all_data():
     all_data = {}
     for symbol, name in all_might.SYMBOLS.items():
-        # process_symbol 함수가 조원들의 모든 분석 결과를 리턴합니다.
+
         data = all_might.process_symbol(symbol, name)
         all_data[name] = data
+    
     return all_data
 
 
 
 if 'all_data' not in st.session_state:
-    with st.spinner("데이터 수집·전처리·모델 시각화 자료를 준비하는 중입니다. "
-                    "현재 화면은 Samsung_crawling.py, train_pipeline.py, pkl 모델 구조를 기준으로 구현할 예정입니다."):
-        # 조원들의 모든 데이터를 한 번에 가져옵니다.
-        all_data = {}
-        for symbol, name in all_might.SYMBOLS.items():
-            all_data[name] = all_might.process_symbol(symbol, name)
-        st.session_state.all_data = all_data
-        #st.session_state.data_loaded = True
+    with st.spinner(
+        "데이터 수집·전처리·모델 시각화 자료를 준비하는 중입니다. "
+        "현재 화면은 Samsung_crawling.py, train_pipeline.py, pkl 모델 구조를 기준으로 정리 중입니다."
+    ):
+        st.session_state.all_data = load_all_data()
+
 
 context = {
     "config": {
@@ -1299,6 +1298,8 @@ context = {
         "데이터 전처리 기준 확인: Samsung_crawling.py",
         "최종 모델 구조 확인: XGBoost Model A/B/C",
         "pkl 모델 feature 구성 확인 완료",
+        "Baseline 실험 결과 요약 및 비교표 틀 추가",
+        "발표용 표 스타일 통일 적용 완료",
         "그래프 시각화 카드형 레이아웃 적용 완료",
         "최종 모델링 결과는 train_pipeline.py 및 pkl 기준으로 연결 예정",
     ],
