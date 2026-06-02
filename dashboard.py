@@ -1,6 +1,6 @@
 import streamlit as st
 import all_might
-
+import pandas as pd
 APP_TITLE = "투자자 심리지수 기반 주가 예측"
 APP_SUBTITLE = "다음 주 수익률 및 방향성 중심"
 
@@ -64,6 +64,92 @@ st.markdown("""
     line-height: 1.65;
     color: #4f4a45;
     font-weight: 400;
+}
+
+            
+/* ===============================
+   발표용 표 공통 스타일
+   =============================== */
+
+.table-card {
+    background-color: #fbf8f1;
+    border: 1px solid #e3dacb;
+    border-radius: 16px;
+    padding: 14px 18px 16px 18px;
+    margin: 12px 0 28px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.table-card-title {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: #3d352d;
+    margin-bottom: 12px;
+}
+
+.presentation-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    border-radius: 12px;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 16px;
+    color: #433c35;
+}
+
+.presentation-table thead th {
+    background-color: #e9e1d3;
+    color: #3d352d;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+    padding: 12px 10px;
+    border: 1px solid #ddd2c3;
+    white-space: nowrap;
+}
+
+.presentation-table tbody td {
+    background-color: #fffdfa;
+    padding: 12px 10px;
+    border: 1px solid #e7ddd0;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.presentation-table tbody tr:nth-child(even) td {
+    background-color: #fcf8f2;
+}
+
+.left-cell {
+    text-align: left !important;
+}
+
+.soft-pos {
+    background-color: #edf7f1 !important;
+}
+
+.soft-neg {
+    background-color: #fbefef !important;
+}
+
+.soft-best {
+    background-color: #fff4ce !important;
+    font-weight: 800;
+}
+
+.soft-pending {
+    background-color: #f3efe8 !important;
+    color: #8c847a;
+    font-style: italic;
+}
+
+.table-footnote {
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #6e665e;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -241,23 +327,7 @@ def render_overview_section(context):
     """, unsafe_allow_html=True)
 
     st.markdown("### 프로젝트 한눈에 보기")
-    st.markdown("### 🤖 최종 모델 구조")
-    st.markdown("""
-    <div class="presentation-info-box">
-    <span class="presentation-info-title">최종 모델 구조 요약</span>
 
-    • <b>Model A</b>: Log Return lag 1–5 + Asset 더미 + 
-    <span class="file-name">Investor_Sentiment_PC1</span><br>
-
-    • <b>Model B</b>: Log Return lag 1–5 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
-
-    • <b>Model C</b>: Log Return lag 1–5 + Asset 더미 + 
-    <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
-
-    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며<br>
-    입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
-    </div>
-    """, unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -283,6 +353,27 @@ def render_overview_section(context):
             label="예측 타깃",
             value="t+1 로그 수익률"
         )
+
+    st.markdown("### 🤖 최종 모델 구조")
+    st.markdown("""
+    <div class="presentation-info-box">
+    <span class="presentation-info-title">최종 모델 구조 요약</span>
+
+    • <b>Model A</b>: Log Return lag 1–5 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span><br>
+
+    • <b>Model B</b>: Log Return lag 1–5 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
+
+    • <b>Model C</b>: Log Return lag 1–5 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
+
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며<br>
+    입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+
 
     st.markdown("---")
     st.markdown("### 🔍 본 프로젝트의 핵심 질문")
@@ -368,8 +459,8 @@ def render_overview_section(context):
         순수한 심리 반응만을 설명한다고 보기에는 어려움이 존재할 수 있습니다.
 
         이에 본 프로젝트에서는 시장 흐름으로 설명되는 부분을 일부 통제하고,  
-        설명되지 않는 잔차(residual)를 투자 심리와 가까운 성분으로
-        추정해볼 수 있다는 방향성을 고려하였습니다.
+        일반 가격 요인으로 충분히 설명되지 않는 부분을  
+        투자심리 proxy에 가까운 성분으로 탐색적으로 해석하는 방향을 고려하였습니다.
         """)
 
     # -------------------------------------------------
@@ -515,11 +606,12 @@ def render_data_prep_section(context):
         if b64_hm:
             st.write("### 잔차 상관계수 히트맵")
             st.markdown("""
-                <div class="presentation-caption">
-                "이 히트맵은 모델 성능을 직접 설명하기보다는, "
-                "residual과 PC1 및 가격 변수 간의 선형 관계를 "
-                "탐색적으로 확인하기 위한 EDA 시각화입니다."</div>
-            """, unsafe_allow_html=True)    
+            <div class="presentation-caption">
+            이 히트맵은 모델 성능을 직접 설명하기보다는,
+            residual과 PC1 및 가격 변수 간의 선형 관계를
+            탐색적으로 확인하기 위한 EDA 시각화입니다.
+            </div>
+            """, unsafe_allow_html=True)   
 
 
             st.image(f"data:image/png;base64,{b64_hm}")
@@ -532,10 +624,12 @@ def render_data_prep_section(context):
         value=f"{var_ratio * 100:.1f}%"
         )
 
-        st.caption(
-        "PC1이 ATR·MFI·STOCH residual의 공통 변동을 어느 정도 요약하는지 보여주는 값입니다."
-        )
-        
+        st.markdown("""
+        <div class="presentation-caption">
+        PC1이 ATR·MFI·STOCH residual의 공통 변동을 어느 정도 요약하는지 보여주는 값입니다.
+        </div>
+        """, unsafe_allow_html=True)
+                
 
         col1, col2, col3 = st.columns(3)
 
@@ -613,6 +707,93 @@ def render_data_prep_section(context):
 
         st.divider()
 
+# 공용 표 함수
+def render_presentation_table(df, title=None, footnote=None):
+    """
+    발표용 카드형 HTML 표를 렌더링한다.
+
+    숫자형 지표는 중앙 정렬하고,
+    설명형 컬럼은 좌측 정렬하여 발표 화면에서 읽기 쉽게 구성한다.
+    """
+
+    headers = "".join(f"<th>{col}</th>" for col in df.columns)
+    rows_html = ""
+
+    left_align_cols = ["사용 정보", "비교 관점"]
+
+    for _, row in df.iterrows():
+        row_html = ""
+
+        for col in df.columns:
+            val = row[col]
+            text = str(val)
+
+            cell_class = ""
+
+            # 입력 예정 / 계산 예정 등은 연한 회색 처리
+            if text in ["입력 예정", "계산 예정"]:
+                cell_class = "soft-pending"
+
+            # 기준 표시는 너무 강하지 않게 처리
+            elif text in ["기준", "-"]:
+                cell_class = "soft-pending"
+
+            # R², 상관계수는 양수/음수 색상 구분
+            elif col in ["R²", "상관계수"]:
+                try:
+                    num = float(val)
+                    cell_class = "soft-pos" if num >= 0 else "soft-neg"
+                    text = f"{num:.4f}"
+                except Exception:
+                    pass
+
+            # RMSE, MAE는 숫자 포맷만 정리
+            elif col in ["RMSE", "MAE", "RMSE(%)", "MAE(%)"]:
+                try:
+                    num = float(val)
+                    text = f"{num:.4f}"
+                except Exception:
+                    pass
+
+            # 방향성 성공률은 50% 이상이면 은은하게 강조, 54% 이상은 더 강조
+            elif col == "방향성 성공률":
+                if "%" in text:
+                    try:
+                        num = float(text.replace("%", ""))
+                        if num >= 54:
+                            cell_class = "soft-best"
+                        elif num >= 50:
+                            cell_class = "soft-pos"
+                        elif num == 0:
+                            cell_class = "soft-pending"
+                        else:
+                            cell_class = "soft-neg"
+                    except Exception:
+                        pass
+
+            align_class = "left-cell" if col in left_align_cols else ""
+
+            row_html += f'<td class="{align_class} {cell_class}">{text}</td>'
+
+        rows_html += f"<tr>{row_html}</tr>"
+
+    html = f"""
+    <div class="table-card">
+        {f'<div class="table-card-title">{title}</div>' if title else ''}
+        <table class="presentation-table">
+            <thead>
+                <tr>{headers}</tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+        {f'<div class="table-footnote">{footnote}</div>' if footnote else ''}
+    </div>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
+
 # [섹션 구현: 모델 예측 결과]
 def render_metric_section(context):
     st.markdown("## 🤖 모델 예측 성능")
@@ -620,25 +801,252 @@ def render_metric_section(context):
     <div class="presentation-info-box">
     <span class="presentation-info-title">최종 모델 구조 요약</span>
 
-    • <b>Model A</b>: 과거 1–5주 로그 수익률 + Asset 더미 + <span class="file-name">Investor_Sentiment_PC1</span><br>
-    • <b>Model B</b>: 과거 1–5주 로그 수익률 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
-    • <b>Model C</b>: 과거 1–5주 로그 수익률 + Asset 더미 + <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
+    • <b>Model A</b>: 과거 1–5주 로그 수익률 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span><br>
 
-    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며<br>
+    • <b>Model B</b>: 과거 1–5주 로그 수익률 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
+
+    • <b>Model C</b>: 과거 1–5주 로그 수익률 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
+
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며
     입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="presentation-info-box">
+    <span class="presentation-info-title">Baseline 실험 결과</span>
+
+    Baseline 실험은 심리 proxy를 사용하지 않았을 때의 기준 성능을 확인하기 위해 진행했습니다.<br><br>
+
+    • <b>Naive Baseline</b>: 다음 주 로그 수익률을 0으로 예측하는 가장 단순한 기준선<br>
+    • <b>Price-only XGBoost</b>: 과거 1–5주 로그 수익률과 Asset 더미만 사용한 기준선<br><br>
+
+    실험 결과, <b>Price-only XGBoost</b>는 방향성 성공률 <b>54.92%</b>를 기록했습니다.
+    이는 심리 proxy 없이도 가격 lag와 자산 구분 정보만으로 일부 방향성 패턴을 포착할 수 있음을 의미합니다.<br><br>
+
+    따라서 이후 Model A/B/C는 이 Price-only XGBoost를 기준선으로 삼아,
+    <span class="file-name">Investor_Sentiment_PC1</span> 또는 residual 기반 심리 proxy가
+    추가적인 설명력을 제공하는지 비교합니다.
+    </div>
+    """, unsafe_allow_html=True)
+
+    baseline_df = pd.DataFrame(
+        {
+            "Model": ["Naive Baseline", "Price-only XGBoost"],
+            "R²": [-0.0540, -0.0835],
+            "RMSE": [0.0571, 0.0578],
+            "MAE": [0.0451, 0.0463],
+            "방향성 성공률": ["0.00%", "54.92%"],
+        }
+    )
+
+    st.markdown("### 📌 Baseline 성능 요약")
+
+    render_presentation_table(
+        baseline_df,
+        title="Baseline 성능 요약",
+        footnote=(
+            "Naive Baseline은 다음 주 로그 수익률을 0으로 예측하는 가장 단순한 기준선이며, "
+            "Price-only XGBoost는 심리 proxy 없이 가격 lag와 Asset 더미만 사용한 기준선입니다."
+        )
+    )
+    # -------------------------------------------------
+    # TODO: 최종 Model A/B/C 결과 도착 후 비교 계산 연결
+    # -------------------------------------------------
+    # 아래 함수는 Price-only XGBoost baseline 대비
+    # Model A/B/C의 방향성 성공률 개선폭을 계산하기 위한 준비 코드입니다.
+    #
+    # 사용 예시:
+    # price_only_da = 0.5492
+    # model_a_da = 0.5710
+    # improvement = calc_da_improvement(model_a_da, price_only_da)
+    # print(improvement)  # "+2.18%p"
+    #
+    # def calc_da_improvement(model_da, baseline_da):
+    #     """
+    #     방향성 성공률 개선폭 계산
+    #     입력값은 0~1 비율 기준으로 받는다.
+    #     예: 0.5492 = 54.92%
+    #     """
+    #     if model_da is None or baseline_da is None:
+    #         return "계산 예정"
+    #
+    #     diff = (model_da - baseline_da) * 100
+    #     return f"{diff:+.2f}%p"
+    #
+    #
+    # def build_final_comparison_table(model_results):
+    #     """
+    #     최종 Model A/B/C 결과가 들어왔을 때
+    #     Baseline과 함께 비교표를 구성하기 위한 준비 함수.
+    #
+    #     model_results 예시:
+    #     {
+    #         "Model A": {"R²": 0.0000, "RMSE": 0.0000, "MAE": 0.0000, "DA": 0.0000},
+    #         "Model B": {"R²": 0.0000, "RMSE": 0.0000, "MAE": 0.0000, "DA": 0.0000},
+    #         "Model C": {"R²": 0.0000, "RMSE": 0.0000, "MAE": 0.0000, "DA": 0.0000},
+    #     }
+    #     """
+    #
+    #     price_only_da = 0.5492
+    #
+    #     rows = [
+    #         {
+    #             "구분": "Naive Baseline",
+    #             "사용 정보": "예측 수익률 0",
+    #             "R²": -0.0540,
+    #             "RMSE": 0.0571,
+    #             "MAE": 0.0451,
+    #             "방향성 성공률": "0.00%",
+    #             "Price-only 대비": "-",
+    #             "비교 관점": "가장 단순한 기준선",
+    #         },
+    #         {
+    #             "구분": "Price-only XGBoost",
+    #             "사용 정보": "가격 lag + Asset 더미",
+    #             "R²": -0.0835,
+    #             "RMSE": 0.0578,
+    #             "MAE": 0.0463,
+    #             "방향성 성공률": "54.92%",
+    #             "Price-only 대비": "기준",
+    #             "비교 관점": "심리 proxy 없는 주요 기준선",
+    #         },
+    #     ]
+    #
+    #     for model_name, desc in [
+    #         ("Model A", "PC1 추가 효과 확인"),
+    #         ("Model B", "개별 residual 추가 효과 확인"),
+    #         ("Model C", "PC1 + residual 결합 효과 확인"),
+    #     ]:
+    #         result = model_results.get(model_name)
+    #
+    #         if result is None:
+    #             rows.append({
+    #                 "구분": model_name,
+    #                 "사용 정보": "최종 결과 입력 예정",
+    #                 "R²": "입력 예정",
+    #                 "RMSE": "입력 예정",
+    #                 "MAE": "입력 예정",
+    #                 "방향성 성공률": "입력 예정",
+    #                 "Price-only 대비": "계산 예정",
+    #                 "비교 관점": desc,
+    #             })
+    #         else:
+    #             da = result.get("DA")
+    #             rows.append({
+    #                 "구분": model_name,
+    #                 "사용 정보": result.get("features", "최종 feature 조합"),
+    #                 "R²": result.get("R²"),
+    #                 "RMSE": result.get("RMSE"),
+    #                 "MAE": result.get("MAE"),
+    #                 "방향성 성공률": f"{da:.2%}",
+    #                 "Price-only 대비": calc_da_improvement(da, price_only_da),
+    #                 "비교 관점": desc,
+    #             })
+    #
+    #     return pd.DataFrame(rows)
+
+
+    comparison_template_df = pd.DataFrame(
+        {
+            "구분": [
+                "Naive Baseline",
+                "Price-only XGBoost",
+                "Model A",
+                "Model B",
+                "Model C",
+            ],
+            "사용 정보": [
+                "예측 수익률 0",
+                "가격 lag + Asset 더미",
+                "가격 lag + Asset 더미 + PC1",
+                "가격 lag + Asset 더미 + residual 3개",
+                "가격 lag + Asset 더미 + PC1 + residual 3개",
+            ],
+            "R²": [
+                "-0.0540",
+                "-0.0835",
+                "입력 예정",
+                "입력 예정",
+                "입력 예정",
+            ],
+            "RMSE": [
+                "0.0571",
+                "0.0578",
+                "입력 예정",
+                "입력 예정",
+                "입력 예정",
+            ],
+            "MAE": [
+                "0.0451",
+                "0.0463",
+                "입력 예정",
+                "입력 예정",
+                "입력 예정",
+            ],
+            "방향성 성공률": [
+                "0.00%",
+                "54.92%",
+                "입력 예정",
+                "입력 예정",
+                "입력 예정",
+            ],
+            "Price-only 대비": [
+                "-",
+                "기준",
+                "계산 예정",
+                "계산 예정",
+                "계산 예정",
+            ],
+            "비교 관점": [
+                "가장 단순한 기준선",
+                "심리 proxy 없는 주요 기준선",
+                "PC1 추가 효과 확인",
+                "개별 residual 추가 효과 확인",
+                "PC1 + residual 결합 효과 확인",
+            ],
+        }
+    )
+
+    st.markdown("### 🧭 최종 모델 비교표 틀")
+  
+
+
+    st.markdown("""
+    <div class="presentation-info-box">
+    <span class="presentation-info-title">최종 비교 구조</span>
+
+    최종 비교는 <b>Naive Baseline</b>과 <b>Price-only XGBoost</b>를 기준선으로 두고,
+    Model A/B/C가 심리 proxy를 추가했을 때 어떤 차이를 보이는지 확인하는 방식으로 진행합니다.<br><br>
+
+    특히 <b>Price-only XGBoost</b>는 심리 proxy를 사용하지 않은 주요 기준선이므로,
+    Model A/B/C의 방향성 성공률과 오차 지표를 이 모델과 비교하는 것이 핵심입니다.
+    </div>
+    """, unsafe_allow_html=True)
+
+    render_presentation_table(
+        comparison_template_df,
+        title="최종 모델 비교표 틀",
+        footnote=(
+            "최종 Model A/B/C 결과가 들어오면 입력 예정 값을 교체하고, "
+            "Price-only XGBoost 대비 방향성 성공률 개선폭을 함께 계산합니다."
+        )
+    )
+
     all_data = context["data"]
     
     for name, data in all_data.items():
         results = data[1] # 성능지표
         st.markdown("---")
         st.subheader(f"📈 {name}")
-        st.caption("""
-                   <div class="presentation-caption">   
-                    "현재 표는 모델별 예측 성능을 비교하기 위한 시각화 영역입니다. "
-                    "최종 모델 기준에서는 Price lag, Asset 더미, PC1, residual 조합별 설명력을 비교합니다."</div>
-                    """, unsafe_allow_html=True)
+        st.markdown("""
+        <div class="presentation-caption">
+        현재 표는 모델별 예측 성능을 비교하기 위한 시각화 영역입니다.
+        최종 모델 기준에서는 Price lag, Asset 더미, PC1, residual 조합별 설명력을 비교합니다.
+        </div>
+        """, unsafe_allow_html=True)
         
         # 모델별 성능표(HTML 방식)를 가져와서 렌더링
         st.components.v1.html(
@@ -673,10 +1081,11 @@ def render_figure_section(context):
     all_data = context["data"]
 
     model_descriptions = {
-        "Model A": "Investor Sentiment(PC1) 기반 모델",
-        "Model B": "Residual 3개 기반 모델",
-        "Model C": "Residual + PC1 결합 모델",
+        "Model A": "Price lag + Investor_Sentiment_PC1 기반 모델",
+        "Model B": "Price lag + Residual 3개 기반 모델",
+        "Model C": "Price lag + PC1 + Residual 3개 결합 모델",
     }
+
 
     for name, data in all_data.items():
         pred_data = data[2]
@@ -684,13 +1093,16 @@ def render_figure_section(context):
 
         st.markdown("---")
         st.subheader(f"📉 {name} 예측 결과 시각화")
-        st.caption( "각 모델의 실제 수익률과 예측 수익률 흐름을 마지막 테스트 구간 기준으로 비교합니다.")
-        model_descriptions = {
-        "Model A": "Price lag + Investor_Sentiment_PC1 기반 모델",
-        "Model B": "Price lag + Residual 3개 기반 모델",
-        "Model C": "Price lag + PC1 + Residual 3개 결합 모델",
-        }
+        st.markdown("""
+        <div class="presentation-caption">
+        각 모델의 실제 수익률과 예측 수익률 흐름을 마지막 테스트 구간 기준으로 비교합니다.
+        </div>
+        """, unsafe_allow_html=True)
+
         for mname, (pred_s, true_s) in pred_data.items():
+            if pred_s is None or true_s is None or not results.get(mname):
+                st.warning(f"{mname} 예측 결과를 표시할 수 없습니다.")
+                continue
             st.markdown(f"### {mname} 예측 그래프")
 
             for key, description in model_descriptions.items():
