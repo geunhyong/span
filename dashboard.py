@@ -1,8 +1,4 @@
-import streamlit as st  
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-import matplotlib.pyplot as plt
-import seaborn as sns       
+import streamlit as st
 import all_might
 
 
@@ -105,7 +101,7 @@ def render_sidebar(context):
 
         input_data = context.get("input", {})
         ticker = input_data.get("ticker", "삼성전자 (005930)")
-        period = input_data.get("period", "최근 6년 (주봉)")
+        period = input_data.get("period", "최근 5년 (주봉)")
         window = input_data.get("window", "10 (프로젝트 기준 윈도우)")
 
         st.info(f"**대상 종목:**\n{ticker}")
@@ -383,8 +379,9 @@ def render_data_prep_section(context):
     for name, data in all_data.items():
 
         df = data[0]
+        var_ratio = data[3]
         loadings = data[4]
-        st.markdown("-----"*50) # 붙어남옴 방지!
+        st.divider()   # 붙어남옴 방지!
         st.subheader(f"🔍 {name} 분석")
 
         # 히트맵 출력
@@ -392,10 +389,27 @@ def render_data_prep_section(context):
 
         if b64_hm:
             st.write("### 잔차 상관계수 히트맵")
+            st.caption(
+                "이 히트맵은 모델 성능을 직접 설명하기보다는, "
+                "residual과 PC1 및 가격 변수 간의 선형 관계를 "
+                "탐색적으로 확인하기 위한 EDA 시각화입니다."
+            )
+
+
             st.image(f"data:image/png;base64,{b64_hm}")
 
         # PCA 가중치
         st.write("### PCA 제1주성분 기여 가중치")
+        
+        st.metric(
+        label="PC1 설명분산비율",
+        value=f"{var_ratio * 100:.1f}%"
+        )
+
+        st.caption(
+        "PC1이 ATR·MFI·STOCH residual의 공통 변동을 어느 정도 요약하는지 보여주는 값입니다."
+        )
+        
 
         col1, col2, col3 = st.columns(3)
 
@@ -471,7 +485,7 @@ def render_data_prep_section(context):
         공통 패턴을 탐색하기 위한 차원 축소 기법으로 해석합니다.
         """)
 
-
+        st.divider()
 
 # [섹션 구현: 모델 예측 결과]
 def render_metric_section(context):
@@ -480,7 +494,9 @@ def render_metric_section(context):
     
     for name, data in all_data.items():
         results = data[1] # 성능지표
-        st.subheader(f"{name} 성능 지표")
+        st.markdown("---")
+        st.subheader(f"📈 {name}")
+        st.caption("Residual 기반 심리지표와 PCA 심리지수를 활용한 XGBoost 모델 비교 결과")
         
         # 모델별 성능표(HTML 방식)를 가져와서 렌더링
         st.components.v1.html(all_might.metrics_table(results), height=300)
@@ -491,7 +507,7 @@ def render_metric_section(context):
         if model_c:
             acc = model_c.get("성공률(방향)", 0)
             if acc > 0.53: # 보수적으로 53% 이상이면 아주 훌륭함
-                st.success(f"🎉 {name}: 모델 C가 시장 방향성을 효과적으로 포착하고 있습니다! (성공률: {acc:.1%})")
+                st.success(f"🎉 {name}: 모델 C가 시장 방향성을 일부 반영하는 경향을 보입니다. (성공률: {acc:.1%})")
             elif acc > 0.50:
                 st.info(f"⚖️ {name}: 시장과 유사한 수준입니다. 심리지수와 결합을 더 최적화해보세요.")
             else:
@@ -499,13 +515,41 @@ def render_metric_section(context):
 
 def render_figure_section(context):
     all_data = context["data"]
+
+    model_descriptions = {
+        "Model A": "Investor Sentiment(PC1) 기반 모델",
+        "Model B": "Residual 3개 기반 모델",
+        "Model C": "Residual + PC1 결합 모델",
+    }
+
     for name, data in all_data.items():
         pred_data = data[2]
         results = data[1]
+
+        st.markdown("---")
+        st.subheader(f"📉 {name} 예측 결과 시각화")
+        st.caption("각 모델의 실제값과 예측값 흐름을 비교합니다.")
+
         for mname, (pred_s, true_s) in pred_data.items():
-            st.write(f"### {mname} 예측 그래프")
-            b64_plot = all_might.plot_pred(name, mname, true_s, pred_s, results[mname])
-            st.image(f"data:image/png;base64,{b64_plot}")
+            st.markdown(f"### {mname} 예측 그래프")
+
+            for key, description in model_descriptions.items():
+                if key in mname:
+                    st.caption(description)
+                    break
+
+            b64_plot = all_might.plot_pred(
+                name,
+                mname,
+                true_s,
+                pred_s,
+                results[mname]
+            )
+
+            st.image(
+                f"data:image/png;base64,{b64_plot}",
+                use_container_width=True
+            )
 
 
 
@@ -626,13 +670,14 @@ if 'all_data' not in st.session_state:
 context = {
     "config": {"app_title": "투자자 심리지수 기반 주가 예측"},
     "data": st.session_state.all_data, # 조원들의 엔진 결과물
-    "input": {"ticker": "삼성전자", "period": "최근 6년", "window": "10"},
+    "input": {"ticker": "삼성전자", "period": "최근 5년", "window": "10"},
     "logs": ["시스템 엔진 로드 완료", "데이터 랜더링 준비 완료"]
 }
 
 
 
 render_header(context)
+render_sidebar(context)
 tabs = render_tabs(context)
 
 # 3. 탭별로 섹션 연결
@@ -642,7 +687,6 @@ with tabs[0]:
 with tabs[1]:
     # 조원들이 만든 잔차, PCA 차트가 여기서 출력됩니다.
     render_data_prep_section(context) 
-    st.write("본 프로젝트는 주가 데이터에서 심리지수를 추출하여 예측력을 검증합니다.")
 with tabs[2]:
     # 모델 성능 지표 및 예측 결과 담기 (조원들의 XGBoost 예측 결과 출력)
     render_metric_section(context)

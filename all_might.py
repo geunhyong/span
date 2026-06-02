@@ -180,7 +180,7 @@ def build_indicators(symbol: str, df: pd.DataFrame) -> pd.DataFrame:
 # ═══════════════════════════════════════════════════════════════
 def ols_residual(y: pd.Series, Xdf: pd.DataFrame) -> pd.Series:
     # 지표(y)를 가격 요인(X: 수익률·모멘텀·변동성)으로 회귀한 뒤 '잔차'만 남긴다.
-    # 잔차 = 가격으로 설명되지 않는 부분 → 가격과 무관한 '순수 심리 성분'으로 해석.
+    # 잔차 = 가격으로 설명되지 않는 부분 → 가격과 무관한 '심리 proxy에 가까운 성분'으로 해석.
     # mask: y나 X 중 하나라도 NaN인 행은 회귀에서 제외(LinearRegression은 NaN 불가).
     mask = y.notna() & Xdf.notna().all(axis=1)
     out  = pd.Series(np.nan, index=y.index, name=y.name)
@@ -364,7 +364,7 @@ def plot_pred(name: str, model_name: str,
              linestyle="--", label="예측 수익률")
     ax1.axhline(0, color="#aaa", lw=0.7, linestyle=":")
     ax1.set_ylabel("%", fontsize=8)
-    ax1.set_title("실제 vs 예측 수익률 (마지막 Fold)", fontsize=10)
+    ax1.set_title("실제 vs 예측 수익률 (마지막 Test Fold)", fontsize=10)
     ax1.legend(fontsize=9); ax1.tick_params(labelsize=8)
 
     tv, pv = true_s.values * 100, pred_s.values * 100
@@ -387,7 +387,7 @@ def plot_residuals_and_pc1(name: str, df: pd.DataFrame, var_ratio: float,
     # 잔차 3개 막대
     fig1, axes = plt.subplots(3, 1, figsize=(11, 6.5), sharex=True)
     fig1.patch.set_facecolor(COLORS["bg"])
-    fig1.suptitle(f"{name}  |  OLS 잔차 (순수 심리 성분)", fontsize=11,
+    fig1.suptitle(f"{name}  |  OLS 잔차 (심리 proxy에 가까운 성분)", fontsize=11,
                   fontweight="bold", color=COLORS["ink"])
     pairs = [("ATR_res","ATR 잔차",COLORS["red"]),
              ("MFI_res","MFI 잔차",COLORS["green"]),
@@ -409,9 +409,9 @@ def plot_residuals_and_pc1(name: str, df: pd.DataFrame, var_ratio: float,
     for sp in ax.spines.values(): sp.set_color(COLORS["line"])
     pc1 = df["PC1"].dropna()
     ax.fill_between(pc1.index, pc1.values, 0,
-                    where=pc1.values >= 0, color=COLORS["green"], alpha=0.65, label="낙관")
+                    where=pc1.values >= 0, color=COLORS["green"], alpha=0.65, label="상대적 양(+)의 심리 구간(낙관)")
     ax.fill_between(pc1.index, pc1.values, 0,
-                    where=pc1.values  < 0, color=COLORS["red"],   alpha=0.65, label="공포")
+                    where=pc1.values  < 0, color=COLORS["red"],   alpha=0.65, label="상대적 음(-)의 심리 구간(공포)")
     ax.axhline(0, color="#888", lw=0.8)
     load_str = f"ATR {loadings[0]:+.2f}  MFI {loadings[1]:+.2f}  STOCH {loadings[2]:+.2f}"
     ax.set_title(f"{name}  |  투자자 심리지수 PC1  (설명분산 {var_ratio:.1%})  "
@@ -445,7 +445,7 @@ def plot_bar_metrics(all_results: dict, name: str) -> str:
     x      = np.arange(len(models))
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(9, 3.2))
     fig.patch.set_facecolor(COLORS["bg"])
-    fig.suptitle(f"{name}  |  모델 성능 비교", fontsize=11,
+    fig.suptitle(f"{name}  |  모델별 성공률(뱡향) 및 상관 비교", fontsize=11,
                  fontweight="bold", color=COLORS["ink"])
     for ax in (a1, a2):
         ax.set_facecolor(COLORS["bg"])
@@ -595,6 +595,13 @@ def metrics_table(results: dict) -> str:
     return (f'<table class="mt"><thead><tr>{head}</tr></thead>'
             f'<tbody>{rows}</tbody></table>')
 
+
+# 참고:
+# 아래 HTML 생성부는 all_might.py를 직접 실행할 때 report.html을 만드는 보조 리포트 기능입니다.
+# 현재 Streamlit 대시보드는 dashboard.py에서 all_might의 분석 결과와 시각화 함수를 불러와 사용합니다.
+# 따라서 발표용 대시보드에는 직접 사용되지 않지만, 정적 리포트 백업 기능으로 보존합니다.
+
+
 def build_asset_section(name: str, data_tuple) -> str:
     df, results, pred_data, var_ratio, loadings = data_tuple
 
@@ -626,7 +633,7 @@ def build_asset_section(name: str, data_tuple) -> str:
   <h2>{name}</h2>
   <div class="asset-sub">PC1 설명분산: <b>{var_ratio:.1%}</b> &nbsp;|&nbsp;
     loadings: ATR {loadings[0]:+.2f} · MFI {loadings[1]:+.2f} · STOCH {loadings[2]:+.2f}
-    &nbsp;|&nbsp; TimeSeriesSplit n={N_SPLITS} · 타깃: t+1 주봉 종가
+    &nbsp;|&nbsp; TimeSeriesSplit n={N_SPLITS} · 타깃: t+1 주봉 수익률
   </div>
   {metrics_table(results)}
   {hm_html}
