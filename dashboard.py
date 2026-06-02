@@ -1,13 +1,19 @@
 import streamlit as st
 import all_might
 
+APP_TITLE = "투자자 심리지수 기반 주가 예측"
+APP_SUBTITLE = "다음 주 수익률 및 방향성 중심"
 
+MODEL_SOURCE_NOTE = (
+    "현재 화면은 발표 시각화 참고용 대시보드 구조이며, "
+    "최종 모델링 결과는 train_pipeline.py 및 저장된 pkl 모델 기준으로 연결 예정입니다."
+)
 
 st.set_page_config(
     initial_sidebar_state="collapsed",
     layout = "wide",
     page_icon= "📈",
-    page_title= "투자자 심리지수 기반 주가 예측 대시보드")
+    page_title= APP_TITLE)
 
 
 
@@ -60,14 +66,22 @@ def render_header(context):
     - 계산 로직은 절대 넣지 않는다.
     """
     title = context.get("config", {}).get(
-            "app_title", "투자자 심리지수 기반 주가 예측 대시보드"
+            "app_title", APP_TITLE
     )
     subtitle = context.get("config", {}).get(
-        "subtitle", "XGBoost Machine Learning & PCA Multi-Indicator Sentiment Model"
+        "subtitle", APP_SUBTITLE
     )
 
     st.title(title)
     st.caption(subtitle)
+
+    st.info(
+        context.get("config", {}).get(
+            "model_source_note",
+            MODEL_SOURCE_NOTE
+        )
+    )
+
     st.markdown("---")
 
 
@@ -100,17 +114,38 @@ def render_sidebar(context):
         st.header("⚙️ 분석 설정 요약")
 
         input_data = context.get("input", {})
-        ticker = input_data.get("ticker", "삼성전자 (005930)")
-        period = input_data.get("period", "최근 5년 (주봉)")
+        ticker = input_data.get("ticker", "비트코인 · 삼성전자 · 코스피")
+        period = input_data.get("period", "최근 6년 (주봉)")
         window = input_data.get("window", "10 (프로젝트 기준 윈도우)")
 
         st.info(f"**대상 종목:**\n{ticker}")
         st.info(f"**분석 기간:**\n{period}")
-        st.info(f"**지표 기준 Window:**\n{window}주")
+        st.info(f"**지표 기준 Window:**\n{window}")
 
         st.markdown("---")
-        st.markdown("💡 *데이터 수집부터 예측까지 파이프라인 자동화 완료*")
+        st.markdown("💡 *데이터 수집·전처리·모델링 흐름을 발표용으로 정리 중입니다.*")
 
+        st.markdown("---")
+        st.subheader("🧩 최종 실험 기준")
+
+        config = context.get("config", {})
+
+        st.info(f"""
+        **전처리 기준**  
+        {config.get("final_preprocessing", "확인 중")}
+
+        **모델링 기준**  
+        {config.get("final_modeling", "확인 중")}
+
+        **데이터 구조**  
+        {config.get("data_structure", "확인 중")}
+
+        **예측 타깃**  
+        {config.get("target", "확인 중")}
+
+        **평가 기준**  
+        {config.get("evaluation", "확인 중")}
+        """)
 
 def render_tabs(context):
     """
@@ -120,7 +155,7 @@ def render_tabs(context):
     tabs = st.tabs(
         [
             "📋 프로젝트 개요",
-            "📊 데이터 탐색 & 순수 심리(PCA)",
+            "📊 데이터 탐색 & 심리_proxy(PCA)",
             "🤖 XGBoost 예측 결과",
             "📜 시스템 로그",
         ]
@@ -139,33 +174,54 @@ def render_overview_section(context):
 
     st.header("📋 프로젝트 개요")
     st.info("""
-    본 프로젝트는 기술적 지표에서 관찰되는 시장 반응을 바탕으로  
-    투자자 심리와 가까운 흐름을 추정하고,
+    본 프로젝트는 **비트코인, 삼성전자, 코스피** 데이터를 함께 활용한  
+    **패널 데이터 구조**를 기반으로 합니다.
 
-    이를 PCA 기반 심리지수(Investor Sentiment)로 재구성한 뒤  
-    XGBoost 모델에서 주가 예측 설명력을 탐색하는 것을 목표로 합니다.
+    `Samsung_crawling.py`를 통해 주봉 OHLCV 데이터와  
+    ATR, MFI, Stochastic 지표를 구성하고,  
+    `train_pipeline.py`에서 residual 추출, PCA 기반 투자자 심리지수 생성,  
+    XGBoost Model A/B/C 학습 및 pkl 모델 저장을 수행하는 구조입니다.
+
+    예측 대상은 절대 종가가 아니라 **다음 주 주봉 로그 수익률**이며,  
+    방향성 성공률과 오차 지표를 함께 확인하는 것을 목표로 합니다.
     """)
 
     st.markdown("### 프로젝트 한눈에 보기")
+    st.markdown("### 🤖 최종 모델 구조")
+    st.info("""
+    **최종 모델 구조 요약**
 
-    col1, col2, col3 = st.columns(3)
+    - **Model A**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1  
+    - **Model B**: Log Return lag 1~5 + Asset 더미 + ATR/MFI/STOCH residual 3개  
+    - **Model C**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1 + residual 3개  
+
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며  
+    입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
+    """)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
-            label="핵심 지표",
-            value="ATR · MFI · STOCH"
+            label="분석 데이터",
+            value="BTC · 삼성전자 · 코스피"
         )
 
     with col2:
         st.metric(
-            label="심리 추정 방식",
+            label="심리 구성",
             value="Residual + PCA"
         )
 
     with col3:
         st.metric(
             label="예측 모델",
-            value="XGBoost"
+            value="XGBoost A/B/C"
+        )
+
+    with col4:
+        st.metric(
+            label="예측 타깃",
+            value="t+1 로그 수익률"
         )
 
     st.markdown("---")
@@ -177,24 +233,26 @@ def render_overview_section(context):
         st.info("""
         **Q1. 왜 기술지표를 그대로 쓰지 않았을까?**
 
-        ATR·MFI·STOCH는 이미
-        시장 흐름 영향을 포함하고 있기 때문
+        ATR·MFI·STOCH는 이미  
+        가격 변화, 변동성, 거래량 등  
+        시장 일반 흐름의 영향을 포함하고 있기 때문
         """)
 
     with q2:
         st.info("""
-        **Q2. 왜 Residual(잔차)을 사용했을까?**
+        **Q2. 왜 Residual과 PCA를 사용했을까?**
 
-        일반 시장 흐름을 일부 통제하고
-        심리와 가까운 성분을 탐색하기 위해
+        일반 가격 요인으로 충분히 설명되지 않는 부분을  
+        심리 proxy에 가까운 성분으로 탐색하고,  
+        공통 흐름을 PC1으로 요약하기 위해
         """)
 
     with q3:
         st.info("""
-        **Q3. 왜 XGBoost를 선택했을까?**
+        **Q3. 왜 Model A/B/C를 비교했을까?**
 
-        비선형·복합 상호작용 구조를
-        반영하기 위해
+        통합 심리지수(PC1), 개별 residual,  
+        그리고 두 조합의 설명력을 비교하기 위해
         """)
 
     st.markdown("---")
@@ -368,10 +426,17 @@ def render_data_prep_section(context):
     히트맵과 PCA 가중치를 시각화합니다.
     """
 
-    st.markdown("## 📊 데이터 탐색 & 심리(PCA)")
+    st.markdown("## 📊 데이터 탐색 & 심리 proxy(PCA)")
+
     st.info("""
-    Residual(잔차) 간 관계성과 PCA loading을 통해  
-    시장 일반 흐름으로 설명되지 않는 공통 심리 반응과 가까운 패턴이 존재하는지 탐색합니다.
+    본 탭은 데이터 전처리와 심리 proxy 구성 과정을 시각적으로 확인하는 영역입니다.
+
+    데이터 수집 및 기술지표 계산은 `Samsung_crawling.py` 기준으로 수행되며,  
+    ATR, MFI, Stochastic 지표를 바탕으로 residual을 추출한 뒤  
+    PCA를 적용하여 `Investor_Sentiment_PC1`을 구성합니다.
+
+    현재 시각화는 residual, PC1, 가격 변수 간 관계를 탐색적으로 확인하기 위한 EDA 성격이 강하며,  
+    모델 성능을 직접적으로 설명하는 결과로 단정하지 않습니다.
     """)
     all_data = context["data"]
 
@@ -490,13 +555,25 @@ def render_data_prep_section(context):
 # [섹션 구현: 모델 예측 결과]
 def render_metric_section(context):
     st.markdown("## 🤖 모델 예측 성능")
+    st.info("""
+    **최종 모델 구조 요약**
+
+    - **Model A**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1  
+    - **Model B**: Log Return lag 1~5 + Asset 더미 + ATR/MFI/STOCH residual 3개  
+    - **Model C**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1 + residual 3개  
+
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며  
+    입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
+    """)
     all_data = context["data"]
     
     for name, data in all_data.items():
         results = data[1] # 성능지표
         st.markdown("---")
         st.subheader(f"📈 {name}")
-        st.caption("Residual 기반 심리지표와 PCA 심리지수를 활용한 XGBoost 모델 비교 결과")
+        st.caption("현재 표는 모델별 예측 성능을 비교하기 위한 시각화 영역입니다. "
+                    "최종 모델 기준에서는 Price lag, Asset 더미, PC1, residual 조합별 설명력을 비교합니다."
+                    )
         
         # 모델별 성능표(HTML 방식)를 가져와서 렌더링
         st.components.v1.html(all_might.metrics_table(results), height=300)
@@ -506,12 +583,23 @@ def render_metric_section(context):
         model_c = results.get("Model C (전체)")
         if model_c:
             acc = model_c.get("성공률(방향)", 0)
-            if acc > 0.53: # 보수적으로 53% 이상이면 아주 훌륭함
-                st.success(f"🎉 {name}: 모델 C가 시장 방향성을 일부 반영하는 경향을 보입니다. (성공률: {acc:.1%})")
+            if acc > 0.53:
+                st.success(
+                    f"📈 {name}: Model C가 테스트 구간에서 방향성을 일부 포착하는 경향을 보입니다. "
+                    f"(방향성 성공률: {acc:.1%})"
+                )
             elif acc > 0.50:
-                st.info(f"⚖️ {name}: 시장과 유사한 수준입니다. 심리지수와 결합을 더 최적화해보세요.")
+                st.info(
+                    f"⚖️ {name}: 방향성 성공률이 50%를 소폭 상회합니다. "
+                    f"추가 검증을 통해 안정성을 확인할 필요가 있습니다. "
+                    f"(방향성 성공률: {acc:.1%})"
+                )
             else:
-                st.error(f"⚠️ {name}: 방향성 예측 성능 개선이 필요합니다. (성공률: {acc:.1%})")
+                st.warning(
+                    f"🔎 {name}: 테스트 구간에서는 방향성 예측력이 제한적으로 나타났습니다. "
+                    f"추가 feature 조정 또는 검증 방식 개선이 필요합니다. "
+                    f"(방향성 성공률: {acc:.1%})"
+                )
 
 def render_figure_section(context):
     all_data = context["data"]
@@ -528,8 +616,12 @@ def render_figure_section(context):
 
         st.markdown("---")
         st.subheader(f"📉 {name} 예측 결과 시각화")
-        st.caption("각 모델의 실제값과 예측값 흐름을 비교합니다.")
-
+        st.caption( "각 모델의 실제 수익률과 예측 수익률 흐름을 마지막 테스트 구간 기준으로 비교합니다.")
+        model_descriptions = {
+        "Model A": "Price lag + Investor_Sentiment_PC1 기반 모델",
+        "Model B": "Price lag + Residual 3개 기반 모델",
+        "Model C": "Price lag + PC1 + Residual 3개 결합 모델",
+        }
         for mname, (pred_s, true_s) in pred_data.items():
             st.markdown(f"### {mname} 예측 그래프")
 
@@ -546,9 +638,20 @@ def render_figure_section(context):
                 results[mname]
             )
 
-            st.image(
-                f"data:image/png;base64,{b64_plot}",
-                use_container_width=True
+            st.markdown(
+                f"""
+                <div style="
+                    background-color:#fbf8f1;
+                    border:1px solid #e3dacb;
+                    border-radius:14px;
+                    padding:14px;
+                    margin:10px 0 34px 0;
+                ">
+                    <img src="data:image/png;base64,{b64_plot}"
+                        style="width:100%; border-radius:10px; display:block;">
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
 
@@ -605,39 +708,60 @@ def render_input_section(context):
 
 def render_log_section(context):
     """
-    [기존 유지/이름 명확화] 데이터 수집부터 모델 적재까지 자동화 파이프라인의 백엔드 로그(`context['logs']`) 출력.
+    시스템 로그 및 프로젝트 정리 상태를 화면에 출력한다.
 
-    실행 로그를 화면에 출력한다.
-
-    이 함수는 데이터 처리, 모델 실행, 예측 완료 등
-    프로젝트 진행 과정에서 생성된 로그를 사용자에게 보여준다.
-
-    Parameters
-    ----------
-    context : dict
-        공용 데이터 딕셔너리.
-        로그는 보통 context['logs'] 리스트에 문자열 형태로 저장된다.
-
-    Returns
-    -------
-    None
-        로그를 화면에 출력만 하므로 반환값은 없다.
-
-    Notes
-    -----
-    - 로그는 디버깅과 검증에 매우 중요하다.
-    - 시간 순서대로 출력하면 흐름을 파악하기 쉽다.
+    이 영역은 실제 서버 로그라기보다는,
+    발표용 대시보드에서 현재까지 확인된 파이프라인 구성과
+    연결 상태를 요약하는 역할을 한다.
     """
 
-    st.subheader("로그")
+    st.header("📜 시스템 로그")
+    st.caption(
+        "현재 대시보드 구성 상태와 최종 모델링 파이프라인 연결 기준을 요약합니다."
+    )
 
+    config = context.get("config", {})
     logs = context.get("logs", [])
+
+    st.markdown("### ✅ 현재 확인된 기준")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.info(f"""
+        **전처리 기준**
+
+        {config.get("final_preprocessing", "확인 중")}
+        """)
+
+    with col2:
+        st.info(f"""
+        **모델링 기준**
+
+        {config.get("final_modeling", "확인 중")}
+        """)
+
+    with col3:
+        st.info(f"""
+        **예측 타깃**
+
+        {config.get("target", "확인 중")}
+        """)
+
+    st.markdown("---")
+    st.markdown("### 🧾 작업 로그")
+
     if not logs:
-        st.info("로그가 없습니다.")
+        st.info("표시할 로그가 없습니다.")
         return
 
-    for log in logs:
-        st.write(f"- {log}")
+    for idx, log in enumerate(logs, start=1):
+        st.write(f"**{idx}.** {log}")
+
+    st.markdown("---")
+    st.success(
+        "현재 대시보드는 최종 모델링 결과 연결 전에도 발표 흐름과 시각화 구조를 확인할 수 있도록 구성되어 있습니다."
+    )
 
 
 
@@ -668,13 +792,36 @@ if 'all_data' not in st.session_state:
         #st.session_state.data_loaded = True
 
 context = {
-    "config": {"app_title": "투자자 심리지수 기반 주가 예측"},
-    "data": st.session_state.all_data, # 조원들의 엔진 결과물
-    "input": {"ticker": "삼성전자", "period": "최근 5년", "window": "10"},
-    "logs": ["시스템 엔진 로드 완료", "데이터 랜더링 준비 완료"]
+    "config": {
+        "app_title": APP_TITLE,
+        "subtitle": APP_SUBTITLE,
+        "model_source_note": MODEL_SOURCE_NOTE,
+
+        # 현재 대시보드 상태
+        "current_engine": "발표 시각화 참고용 구조",
+        "final_preprocessing": "Samsung_crawling.py",
+        "final_modeling": "train_pipeline.py + pkl 모델 A/B/C",
+
+        # 최종 실험 기준
+        "data_structure": "비트코인 · 삼성전자 · 코스피 패널 데이터",
+        "target": "t+1 주봉 로그 수익률",
+        "evaluation": "방향성 성공률, RMSE, R², 상관계수",
+    },
+    "data": st.session_state.all_data,
+    "input": {
+        "ticker": "비트코인 · 삼성전자 · 코스피",
+        "period": "최근 6년 주봉",
+        "window": "10주 기준",
+    },
+    "logs": [
+        "Streamlit 대시보드 UI 구조 로드 완료",
+        "데이터 전처리 기준 확인: Samsung_crawling.py",
+        "최종 모델 구조 확인: XGBoost Model A/B/C",
+        "pkl 모델 feature 구성 확인 완료",
+        "그래프 시각화 카드형 레이아웃 적용 완료",
+        "최종 모델링 결과는 train_pipeline.py 및 pkl 기준으로 연결 예정",
+    ],
 }
-
-
 
 render_header(context)
 render_sidebar(context)
