@@ -9,3 +9,6 @@ xgboost
 scikit-learn
 joblib
 yfinance
+beautifulsoup4
+seaborn
+koreanize-matplotlib
