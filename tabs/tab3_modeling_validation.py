@@ -19,7 +19,7 @@ def run():
     X = data[['ATR', 'MFI', 'Stochastic']]  # 피처
     y = data['Close']  # 타겟
     
-    st.subheader("시계열 Train_Test_Split(마지막 fold 사용)"
+    st.subheader("시계열 Train_Test_Split(마지막 fold 사용)")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False) #random_state has no effect when shuffle=False
     
     # XGBoost 모델 훈련

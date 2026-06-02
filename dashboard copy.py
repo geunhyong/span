@@ -137,341 +137,55 @@ def render_tabs(context):
 
 def render_overview_section(context):
     """
-    프로젝트 개요 및 연구 흐름 설명
-    발표용/보고서용 스토리라인 기반 구성
+    [신규 생성] 김민호님의 스토리라인 기획 반영.
+    - 보조지표(ATR, MFI, STOCH)의 가격 효과 통제(Resampling) 목적 서술
+    - 전체 분석 및 검증 프로세스 흐름도/안내문 출력
     """
 
-    st.header("📋 프로젝트 개요")
-    st.info("""
-    본 프로젝트는 기술적 지표에서 관찰되는 시장 반응을 바탕으로  
-    투자자 심리와 가까운 흐름을 추정하고,
-
-    이를 PCA 기반 심리지수(Investor Sentiment)로 재구성한 뒤  
-    XGBoost 모델에서 주가 예측 설명력을 탐색하는 것을 목표로 합니다.
-    """)
-
-    st.markdown("### 프로젝트 한눈에 보기")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            label="핵심 지표",
-            value="ATR · MFI · STOCH"
-        )
-
-    with col2:
-        st.metric(
-            label="심리 추정 방식",
-            value="Residual + PCA"
-        )
-
-    with col3:
-        st.metric(
-            label="예측 모델",
-            value="XGBoost"
-        )
-
-    st.markdown("---")
-    st.markdown("### 🔍 본 프로젝트의 핵심 질문")
-
-    q1, q2, q3 = st.columns(3)
-
-    with q1:
-        st.info("""
-        **Q1. 왜 기술지표를 그대로 쓰지 않았을까?**
-
-        ATR·MFI·STOCH는 이미
-        시장 흐름 영향을 포함하고 있기 때문
-        """)
-
-    with q2:
-        st.info("""
-        **Q2. 왜 Residual(잔차)을 사용했을까?**
-
-        일반 시장 흐름을 일부 통제하고
-        심리와 가까운 성분을 탐색하기 위해
-        """)
-
-    with q3:
-        st.info("""
-        **Q3. 왜 XGBoost를 선택했을까?**
-
-        비선형·복합 상호작용 구조를
-        반영하기 위해
-        """)
-
-    st.markdown("---")
-    # -------------------------------------------------
-    # 1. 프로젝트 목적
-    # -------------------------------------------------
-    with st.expander("🎯 프로젝트 목적", expanded=True):
-
-
-
-        st.markdown("""
-        기존 주가 예측은 가격 변화 자체나 재무 정보 중심 접근이 많았습니다.  
-        반면 본 프로젝트는 시장 참여자의 심리적 반응과 가까운 흐름이  
-        가격 움직임에 일부 영향을 줄 수 있다는 가능성을 바탕으로 시작되었습니다.
-
-        이에 따라 ATR, MFI, Stochastic과 같은 기술지표에서  
-        시장 일반 흐름의 영향을 일부 통제하고, 남는 신호를 심리적 반응과
-        가까운 proxy로 해석해볼 수 있는지 탐색하고자 하였습니다.
-        """)
-
-    # -------------------------------------------------
-    # 2. 이론적 배경
-    # -------------------------------------------------
-    with st.expander("📚 이론적 배경 및 지표 선정 이유"):
-
-        st.markdown("""
-        본 프로젝트는 기술지표를 투자심리를 직접 측정하는 지표로 보기보다는,  
-        시장 참여자의 행동 흔적을 간접적으로 반영할 가능성이 있는 신호로 해석하였습니다.
-
-        - **ATR (Average True Range)**  
-        → 시장 변동성 반응과 가까운 성격을 가질 수 있으며,  
-        투자자의 불안·과민 반응이 일부 반영될 가능성을 추정할 수 있습니다.
-
-        - **MFI (Money Flow Index)**  
-        → 거래량과 가격 흐름을 함께 고려하므로,  
-        자금 유입 및 매수·매도 심리 변화와 가까운 특징을 가질 수 있습니다.
-
-        - **Stochastic Oscillator**  
-        → 과매수·과매도 구간에서 나타나는 심리 반응을  
-        간접적으로 시사하는 신호에 가까울 수 있다고 보았습니다.
-        """)
-
-    # -------------------------------------------------
-    # 3. Residual
-    # -------------------------------------------------
-    with st.expander("🧩 Residual(잔차)를 활용한 이유"):
-
-        st.markdown("""
-        기술지표 자체는 이미 가격 변화, 변동성, 거래량 등의  
-        시장 일반 흐름 영향을 포함하고 있습니다.
-
-        따라서 기술지표를 그대로 사용하는 경우,  
-        순수한 심리 반응만을 설명한다고 보기에는 어려움이 존재할 수 있습니다.
-
-        이에 본 프로젝트에서는 시장 흐름으로 설명되는 부분을 일부 통제하고,  
-        설명되지 않는 잔차(residual)를 투자 심리와 가까운 성분으로
-        추정해볼 수 있다는 방향성을 고려하였습니다.
-        """)
-
-    # -------------------------------------------------
-    # 4. PCA
-    # -------------------------------------------------
-    with st.expander("🧠 PCA 기반 투자자 심리지수 구성"):
-
-        st.markdown("""
-        ATR, MFI, Stochastic residual은 서로 다른 성격을 가진 신호이기 때문에  
-        일부 중복 정보와 노이즈를 포함할 가능성이 존재합니다.
-
-        이에 따라 PCA(주성분 분석)를 활용하여 공통적으로 나타나는 흐름을  
-        하나의 투자자 심리지수와 가까운 형태로 압축해볼 수 있는지 탐색하였습니다.
-
-        이는 개별 지표를 제거하려는 목적이라기보다,  
-        공통 심리 흐름에 가까운 특징을 비교적 안정적으로 살펴보기 위한 시도에 가깝습니다.
-        """)
-
-    # -------------------------------------------------
-    # 5. XGBoost 선택 이유
-    # -------------------------------------------------
-    with st.expander("🤖 XGBoost 모델 선택 이유"):
-
-        st.markdown("""
-        본 프로젝트는 단순한 예측 정확도뿐 아니라  
-        어떠한 조건과 조합이 예측에 기여했는지 함께 살펴보는 방향성을 고려하였습니다.
-
-        XGBoost는 다음과 같은 특성이 연구 목적과 비교적 가까운 모델로 판단되었습니다.
-
-        - 비선형 패턴을 반영할 가능성
-        - 트리 분기(split)를 통한 복합 조건 탐색
-        - 지표 간 상호작용(cross interaction) 반영 가능성
-        - Ensemble 구조 기반 안정적 일반화 가능성
-
-        예를 들어 Stochastic의 특정 구간과 변동성 신호가 함께 나타날 때  
-        단순 선형관계보다 복합적인 심리 반응을 반영할 가능성을 추정해볼 수 있다고 보았습니다.
-        """)
-
-    # -------------------------------------------------
-    # 6. 프로젝트 흐름
-    # -------------------------------------------------
-    with st.expander("🔄 프로젝트 분석 흐름", expanded=True):
-
-        st.markdown("### 프로젝트 분석 Pipeline")
-
-        c1, arrow1, c2, arrow2, c3, arrow3, c4, arrow4, c5, arrow5, c6 = st.columns(
-            [2, 0.5, 2, 0.5, 2, 0.5, 2, 0.5, 2, 0.5, 2]
-        )
-
-        with c1:
-            st.info("""
-            **1️⃣ 데이터 수집**
-
-            주가 데이터 확보  
-            기간 및 종목 설정
-            """)
-
-        with arrow1:
-            st.markdown("## ➡️")
-
-        with c2:
-            st.info("""
-            **2️⃣ 기술지표 계산**
-
-            ATR  
-            MFI  
-            STOCH
-            """)
-
-        with arrow2:
-            st.markdown("## ➡️")
-
-        with c3:
-            st.info("""
-            **3️⃣ Residual 추출**
-
-            시장 일반 흐름 영향 일부 통제
-            """)
-
-        with arrow3:
-            st.markdown("## ➡️")
-
-        with c4:
-            st.info("""
-            **4️⃣ PCA 심리지수**
-
-            공통 심리 흐름 압축
-            """)
-
-        with arrow4:
-            st.markdown("## ➡️")
-
-        with c5:
-            st.info("""
-            **5️⃣ XGBoost 학습**
-
-            비선형 · 상호작용 학습
-            """)
-
-        with arrow5:
-            st.markdown("## ➡️")
-
-        with c6:
-            st.success("""
-            **6️⃣ 성능 검증**
-
-            R² · RMSE  
-            방향성 성공률
-            """)
+# ==============================================================================
+# 3. [탭 2] 데이터 정제 및 PCA 분석 검증 영역 (김근형님 시각화 집중 반영)
+# ==============================================================================
+if 'all_data' not in st.session_state:
+    with st.spinner("조원들의 엔진(all_might.py)을 가동 중입니다..."):
+        all_data = {}
+        for symbol, name in all_might.SYMBOLS.items():
+            all_data[name] = all_might.process_symbol(symbol, name)
+        st.session_state.all_data = all_data
 
 def render_data_prep_section(context):
     """
-    조원들이 만든 all_might 데이터를 가져와서
-    히트맵과 PCA 가중치를 시각화합니다.
+    조원들이 만든 all_might 데이터를 가져와서 히트맵과 PCA 가중치를 시각화합니다.
     """
-
+    """
+    [신규 생성] 가격 요인을 통제한 잔차 분석 및 PCA 결과 출력 전용 함수.
+    - 김근형님이 구현할 '잔차 간 Pearson vs Spearman Heatmap' 출력 (`st.pyplot`)
+    - 피어슨과 스피어만의 차이점을 설명하는 민호님의 핵심 가이드 텍스트 배치
+    - 'PCA 제1주성분(Investor Sentiment) 구성을 위한 지표별 기여 가중치(Weights) 바 차트' 출력
+    """
     st.markdown("## 📊 데이터 탐색 & 심리(PCA)")
-    st.info("""
-    Residual(잔차) 간 관계성과 PCA loading을 통해  
-    시장 일반 흐름으로 설명되지 않는 공통 심리 반응과 가까운 패턴이 존재하는지 탐색합니다.
-    """)
+    #all_data = context.get("data", {}) # 데이터 가방을 엽니다.
     all_data = context["data"]
-
-
-    for name, data in all_data.items():
-
+for name, data in all_data.items():
         df = data[0]
         loadings = data[4]
-        st.markdown("-----"*50) # 붙어남옴 방지!
+        
         st.subheader(f"🔍 {name} 분석")
-
-        # 히트맵 출력
+        
+        # 1. 히트맵 출력 (all_might의 plot_heatmap 활용)
+        # 이 함수는 b64 문자열을 리턴하므로 st.image로 출력합니다.
         b64_hm = all_might.plot_heatmap(name, df)
-
         if b64_hm:
             st.write("### 잔차 상관계수 히트맵")
             st.image(f"data:image/png;base64,{b64_hm}")
-
-        # PCA 가중치
+        
+        # 2. PCA 가중치 (loadings 데이터를 사용)
         st.write("### PCA 제1주성분 기여 가중치")
-
         col1, col2, col3 = st.columns(3)
-
-        col1.markdown(
-            f"""
-            <div style="text-align:center;">
-                <div style="font-size:32px; font-weight:bold;">ATR</div>
-                <div style="font-size:32px;">{loadings[0]:.2f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        col2.markdown(
-            f"""
-            <div style="text-align:center;">
-                <div style="font-size:32px; font-weight:bold;">MFI</div>
-                <div style="font-size:32px;">{loadings[1]:.2f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        col3.markdown(
-            f"""
-            <div style="text-align:center;">
-                <div style="font-size:32px; font-weight:bold;">STOCH</div>
-                <div style="font-size:32px;">{loadings[2]:.2f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-        # -------------------------------
-        # PCA 자동 해석 카드
-        # -------------------------------
-
-        st.markdown("### 🧠 PCA 결과 해석")
-
-        atr = abs(loadings[0])
-        mfi = abs(loadings[1])
-        stoch = abs(loadings[2])
-
-        weights = {
-            "ATR": atr,
-            "MFI": mfi,
-            "STOCH": stoch
-        }
-
-        sorted_weights = sorted(
-            weights.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-
-        top1 = sorted_weights[0][0]
-        top2 = sorted_weights[1][0]
-
-        st.success(f"""
-        **해석 가이드**
-
-        본 PCA 결과에서는 **{top1}**, **{top2}** 성분이
-        상대적으로 크게 반영되었습니다.
-
-        이는 투자자 심리와 가까운 공통 흐름이
-        해당 지표에서 비교적 강하게 나타났을 가능성을 시사합니다.
-
-        반면 기여도가 낮은 지표는 상대적으로
-        공통 심리 흐름 설명력이 제한적일 수 있습니다.
-
-        ※ PCA는 인과관계를 증명하는 과정이 아니라,
-        공통 패턴을 탐색하기 위한 차원 축소 기법으로 해석합니다.
-        """)
-
-
+        col1.metric("ATR", f"{loadings[0]:.2f}")
+        col2.metric("MFI", f"{loadings[1]:.2f}")
+        col3.metric("STOCH", f"{loadings[2]:.2f}")
+        
+        st.info("💡 **가이드**: ATR, MFI, STOCH 잔차들의 결합이 PC1(투자자 심리지수)을 구성합니다.")
 
 # [섹션 구현: 모델 예측 결과]
 def render_metric_section(context):
@@ -516,6 +230,20 @@ def render_figure_section(context):
 # 4. [탭 3] XGBoost 모델 예측 및 ML 지표 평가 영역 (권보성님/김민호님 기획 반영)
 # ==============================================================================
 
+def render_metric_section(context):
+    """
+    [기존 수정] 수치 기반의 모델 평가 지표 출력 함수.
+    - 기존의 텍스트 무더기(`st.write`) 출력을 탈피
+    - 최신 기획서에 명시된 TimeSeriesSplit 기반의 R²(결정계수), RMSE, MAE를 `st.metric` 카드로 구조화
+    """
+
+def render_result_section(context):
+    """
+    [기존 수정] 최종 주가 예측 추세 시각화 출력 함수.
+    - XGBoost 모델이 도출한 테스트 데이터의 '실제 주가 vs 예측 주가 시계열 라인 차트' 출력
+    - 과적합 방지를 증명하는 '조기 중단(Early Stopping) 학습 곡선(Learning Curve)' 차트 추가 출력 가능 영역
+    """
+
 
 def render_input_section(context):
     """
@@ -553,6 +281,131 @@ def render_input_section(context):
     st.write(f"Period: {input_data.get('period', 'N/A')}")
 
 
+
+def render_result_section(context):
+    """
+    모델의 예측 결과나 분석 결과를 화면에 출력한다.
+
+    이 함수는 계산 모듈이 생성한 결과를 사용자에게 보여주는 역할을 한다.
+    예측값, 표 형식 결과, 요약 문장 등을 배치할 수 있다.
+
+    Parameters
+    ----------
+    context : dict
+        공용 데이터 딕셔너리.
+        결과 데이터는 주로 context['results']에 저장되어 있다고 가정한다.
+
+    Returns
+    -------
+    None
+        결과를 화면에 표시만 하므로 반환값은 없다.
+
+    Notes
+    -----
+    - 결과를 새로 계산하지 말고, 이미 만들어진 값을 보여주기만 한다.
+    - 결과가 없을 경우에는 안내 문구를 출력하는 것이 좋다.
+    """
+    
+    st.subheader("결과")
+    results = context.get("results", {})
+    if not results:
+        st.info("표시할 결과가 없습니다.")
+        return
+
+    st.write(results)
+
+
+
+def render_metric_section(context):
+    """
+    모델의 성능 지표나 분석 지표를 화면에 출력한다.
+    이 함수는 모델 평가 결과나 분석 지표를 사용자에게 보여주는 역할을 한다.
+    예측 정확도, RMSE, R² 같은 수치 지표나, 분석 요약 문장 등을 배치할 수 있다.                         
+    Parameters
+    ----------                  
+    context : dict
+        공용 데이터 딕셔너리.
+        지표 데이터는 주로 context['metrics']에 저장되어 있다고 가정한다.   
+    Returns
+    -------
+    None
+        지표를 화면에 표시만 하므로 반환값은 없다.
+    Notes
+
+    - 지표를 새로 계산하지 말고, 이미 만들어진 값을 보여주기만 한다.
+    - 지표가 없을 경우에는 안내 문구를 출력하는 것이 좋다.           
+    -----
+    """    
+    #st.write("|기준점|사용|측정대상(심리_proxy)|의미|\n|-----|----|--------|----|\n|multi_navie_baseline|Samsung, xgb_model_A| ATR_10_res, MFI_10_res, STOCHk_10_3_3_res, Investor_Sentiment|얼마나 많이 개선되었나|\n|multi_navie_baseline|Samsung, xgb_model_B|Investor_Sentiment|얼마나 많이 개선되었나|\n|multi_navie_baseline|Samsung, xgb_model_C|ATR_10_res, MFI_10_res, STOCHk_10_3_3_res,Investor_Sentiment|얼마나 많이 개선되었나|\n|baseline_exogenous|Samsung, xgb_model_D|기술지표STOCHk_10_3_3, STOCHd_10_3_3의 골든 크로스|	 기술지표와 심리proxy의 비교|\n" )
+    st.subheader("지표")
+    metrics = context.get("metrics", {})
+    if not metrics:
+        st.info("표시할 지표가 없습니다.")
+        return
+    st.write(metrics)
+
+
+
+
+def render_figure_section(context):
+    """
+    figures에 저장된 그래프를 Streamlit 화면에 표시한다.
+
+    이 함수는 visualization.py 등에서 생성된 figure 객체를 읽어서,
+    figure의 종류에 따라 적절한 Streamlit 출력 함수를 사용한다.
+
+    지원하는 그래프 종류:
+    - Plotly figure  -> st.plotly_chart()
+    - Matplotlib figure -> st.pyplot()
+    Seaborn은 보통 Matplotlib 기반으로 그려지므로 st.pyplot()로 출력한다.
+    
+    Parameters
+    ----------
+    context : dict
+        공유 context 딕셔너리.
+        context["figures"]에는 그래프 객체 또는 그래프 정보가 저장되어 있다고 가정한다.
+        예시:
+        {
+            "price_chart": plotly_fig,
+            "volume_chart": mpl_fig,
+            "sentiment_chart": seaborn_fig
+        }
+
+    Returns
+    -------
+    None
+        화면에 그래프만 출력한다.
+    """
+  
+    import plotly.graph_objects as go
+    import matplotlib.figure
+
+    figures = context.get("figures", {})
+
+    if not figures:
+        st.info("표시할 그래프가 없습니다.")
+        return
+
+    for fig_name, fig_obj in figures.items():
+        st.subheader(fig_name)
+
+        # 1) Plotly figure인 경우
+        if isinstance(fig_obj, go.Figure):
+            st.plotly_chart(fig_obj, use_container_width=True)
+
+        # 2) Matplotlib figure인 경우
+        elif isinstance(fig_obj, matplotlib.figure.Figure):
+            st.pyplot(fig_obj)
+
+        # 3) Seaborn은 보통 Matplotlib 위에 그려지므로
+        #    별도의 figure 객체가 아니라면 현재 활성화된 matplotlib figure를 출력
+        else:
+            try:
+                st.pyplot(fig_obj)
+            except Exception:
+                st.warning(f"'{fig_name}' 그래프는 현재 지원되는 형식이 아닙니다.")
+
+    return None
 
 
 # ==============================================================================
@@ -614,7 +467,7 @@ def load_all_data():
 
 
 
-if 'all_data' not in st.session_state:
+if 'data_loaded' not in st.session_state:
     with st.spinner("조원들의 엔진(all_might.py)을 가동 중입니다..."):
         # 조원들의 모든 데이터를 한 번에 가져옵니다.
         all_data = {}
@@ -646,7 +499,7 @@ with tabs[1]:
 with tabs[2]:
     # 모델 성능 지표 및 예측 결과 담기 (조원들의 XGBoost 예측 결과 출력)
     render_metric_section(context)
-    # render_result_section(context)
+    render_result_section(context)
     render_figure_section(context) 
     # render_figure_section(context) # 만약 그래프가 figures 딕셔너리에 있다면 사용
 with tabs[3]:
@@ -656,5 +509,25 @@ with tabs[3]:
 
 
 
+
+from tabs import data_preprocessing, sentiment_proxy, modeling_validation, performance_analysis, results_visualization
+
+
+def main():
+    st.title("주가 예측 심리지수 모델링과 평가")
+    
+    tabs = {
+        "데이터 전처리": data_preprocessing,
+        "심리지표 계산": sentiment_proxy,
+        "모델링 및 검증": modeling_validation,
+        "성능 분석": performance_analysis,
+        "결과 시각화": results_visualization,
+    }
+    
+    selected_tab = st.sidebar.selectbox("탭 선택", list(tabs.keys()))
+    tabs[selected_tab].run()  # 선택된 탭의 run 함수를 호출
+
+if __name__ == "__main__":
+    main()
 
 
