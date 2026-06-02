@@ -15,6 +15,58 @@ st.set_page_config(
     page_icon= "📈",
     page_title= APP_TITLE)
 
+st.markdown("""
+<style>
+/* ===============================
+   공통 발표용 안내 박스 스타일
+   =============================== */
+
+.presentation-info-box {
+    background-color: #e6f1ff;
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 12px 0 28px 0;
+    color: #064f9e;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 18px;
+    line-height: 1.75;
+    font-weight: 500;
+}
+
+.presentation-info-box b {
+    font-weight: 800;
+}
+
+.presentation-info-title {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: #064f9e;
+}
+
+/* 파일명, 모델명, 컬럼명 등 기술 용어 강조용 */
+.file-name {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: #064f9e;
+    background-color: rgba(255, 255, 255, 0.38);
+    padding: 2px 7px;
+    border-radius: 7px;
+    white-space: nowrap;
+}
+
+/* 일반 설명문 통일용 */
+.presentation-caption {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 18px;
+    line-height: 1.65;
+    color: #4f4a45;
+    font-weight: 400;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 #option = st.multiselect("분석할 모델을 선택하세요", ["model_xgb","model_A", "model_B","model_C","naive_baseline","xgb_",""])
@@ -173,31 +225,39 @@ def render_overview_section(context):
     """
 
     st.header("📋 프로젝트 개요")
-    st.info("""
-    본 프로젝트는 **비트코인, 삼성전자, 코스피** 데이터를 함께 활용한  
-    **패널 데이터 구조**를 기반으로 합니다.
+    st.markdown("""
+    <div class="presentation-info-box">
+    본 프로젝트는 <b>비트코인, 삼성전자, 코스피</b> 데이터를 함께 활용한<br>
+    <b>패널 데이터 구조</b>를 기반으로 합니다.<br><br>
 
-    `Samsung_crawling.py`를 통해 주봉 OHLCV 데이터와  
-    ATR, MFI, Stochastic 지표를 구성하고,  
-    `train_pipeline.py`에서 residual 추출, PCA 기반 투자자 심리지수 생성,  
-    XGBoost Model A/B/C 학습 및 pkl 모델 저장을 수행하는 구조입니다.
+    <span class="file-name">Samsung_crawling.py</span>를 통해 주봉 OHLCV 데이터와<br>
+    ATR, MFI, Stochastic 지표를 구성하고,<br>
+    <span class="file-name">train_pipeline.py</span>에서 residual 추출, PCA 기반 투자자 심리지수 생성,<br>
+    XGBoost Model A/B/C 학습 및 pkl 모델 저장을 수행하는 구조입니다.<br><br>
 
-    예측 대상은 절대 종가가 아니라 **다음 주 주봉 로그 수익률**이며,  
+    예측 대상은 절대 종가가 아니라 <b>다음 주 주봉 로그 수익률</b>이며,<br>
     방향성 성공률과 오차 지표를 함께 확인하는 것을 목표로 합니다.
-    """)
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("### 프로젝트 한눈에 보기")
     st.markdown("### 🤖 최종 모델 구조")
-    st.info("""
-    **최종 모델 구조 요약**
+    st.markdown("""
+    <div class="presentation-info-box">
+    <span class="presentation-info-title">최종 모델 구조 요약</span>
 
-    - **Model A**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1  
-    - **Model B**: Log Return lag 1~5 + Asset 더미 + ATR/MFI/STOCH residual 3개  
-    - **Model C**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1 + residual 3개  
+    • <b>Model A</b>: Log Return lag 1–5 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span><br>
 
-    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며  
+    • <b>Model B</b>: Log Return lag 1–5 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
+
+    • <b>Model C</b>: Log Return lag 1–5 + Asset 더미 + 
+    <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
+
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며<br>
     입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
-    """)
+    </div>
+    """, unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -454,11 +514,12 @@ def render_data_prep_section(context):
 
         if b64_hm:
             st.write("### 잔차 상관계수 히트맵")
-            st.caption(
+            st.markdown("""
+                <div class="presentation-caption">
                 "이 히트맵은 모델 성능을 직접 설명하기보다는, "
                 "residual과 PC1 및 가격 변수 간의 선형 관계를 "
-                "탐색적으로 확인하기 위한 EDA 시각화입니다."
-            )
+                "탐색적으로 확인하기 위한 EDA 시각화입니다."</div>
+            """, unsafe_allow_html=True)    
 
 
             st.image(f"data:image/png;base64,{b64_hm}")
@@ -555,28 +616,35 @@ def render_data_prep_section(context):
 # [섹션 구현: 모델 예측 결과]
 def render_metric_section(context):
     st.markdown("## 🤖 모델 예측 성능")
-    st.info("""
-    **최종 모델 구조 요약**
+    st.markdown("""
+    <div class="presentation-info-box">
+    <span class="presentation-info-title">최종 모델 구조 요약</span>
 
-    - **Model A**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1  
-    - **Model B**: Log Return lag 1~5 + Asset 더미 + ATR/MFI/STOCH residual 3개  
-    - **Model C**: Log Return lag 1~5 + Asset 더미 + Investor_Sentiment_PC1 + residual 3개  
+    • <b>Model A</b>: 과거 1–5주 로그 수익률 + Asset 더미 + <span class="file-name">Investor_Sentiment_PC1</span><br>
+    • <b>Model B</b>: 과거 1–5주 로그 수익률 + Asset 더미 + ATR/MFI/STOCH residual 3개<br>
+    • <b>Model C</b>: 과거 1–5주 로그 수익률 + Asset 더미 + <span class="file-name">Investor_Sentiment_PC1</span> + residual 3개<br><br>
 
-    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며  
+    ※ pkl 파일 확인 결과, Model A/B/C는 각각 XGBRegressor 객체로 저장되어 있으며<br>
     입력 feature 수는 A=9개, B=11개, C=12개로 확인되었습니다.
-    """)
+    </div>
+    """, unsafe_allow_html=True)
     all_data = context["data"]
     
     for name, data in all_data.items():
         results = data[1] # 성능지표
         st.markdown("---")
         st.subheader(f"📈 {name}")
-        st.caption("현재 표는 모델별 예측 성능을 비교하기 위한 시각화 영역입니다. "
-                    "최종 모델 기준에서는 Price lag, Asset 더미, PC1, residual 조합별 설명력을 비교합니다."
-                    )
+        st.caption("""
+                   <div class="presentation-caption">   
+                    "현재 표는 모델별 예측 성능을 비교하기 위한 시각화 영역입니다. "
+                    "최종 모델 기준에서는 Price lag, Asset 더미, PC1, residual 조합별 설명력을 비교합니다."</div>
+                    """, unsafe_allow_html=True)
         
         # 모델별 성능표(HTML 방식)를 가져와서 렌더링
-        st.components.v1.html(all_might.metrics_table(results), height=300)
+        st.components.v1.html(
+            all_might.metrics_table(results),
+            height=400
+        )
 
         # 2. [추가하면 좋을 부분] 표를 보고 판단하기 힘들 때 친절하게 알려주기
         # Model C의 성공률을 가져와서 판단하는 로직
@@ -783,7 +851,8 @@ def load_all_data():
 
 
 if 'all_data' not in st.session_state:
-    with st.spinner("조원들의 엔진(all_might.py)을 가동 중입니다..."):
+    with st.spinner("데이터 수집·전처리·모델 시각화 자료를 준비하는 중입니다. "
+                    "현재 화면은 Samsung_crawling.py, train_pipeline.py, pkl 모델 구조를 기준으로 구현할 예정입니다."):
         # 조원들의 모든 데이터를 한 번에 가져옵니다.
         all_data = {}
         for symbol, name in all_might.SYMBOLS.items():

@@ -500,6 +500,11 @@ def process_symbol(symbol: str, name: str):
 # ═══════════════════════════════════════════════════════════════
 #  9. HTML 생성
 # ═══════════════════════════════════════════════════════════════
+
+# 참고:
+# 아래 HTML 생성부는 all_might.py를 직접 실행할 때 report.html을 만드는 보조 리포트 기능입니다.
+# 현재 Streamlit 대시보드는 dashboard.py에서 all_might의 분석 결과와 시각화 함수를 불러와 사용합니다.
+# 따라서 발표용 대시보드에는 직접 사용되지 않지만, 정적 리포트 백업 기능으로 보존합니다.
 CSS = """
 :root{--bg:#f9f6f0;--bg2:#efe9dd;--ink:#26201c;--soft:#5b524a;--line:#d8cfbe;
   --red:#9d3326;--green:#2f6f5e;--gold:#b07d27}
@@ -544,7 +549,7 @@ table.mt tbody tr:hover{background:var(--bg2)}
 .g1{display:grid;grid-template-columns:1fr;gap:16px;margin:16px 0}
 @media(max-width:700px){.g2{grid-template-columns:1fr}}
 figure{margin:0}
-figcaption{font-size:11.5px;font-family:monospace;color:var(--soft);
+figcaption{font-size:13px;font-family:monospace;color:var(--soft);
   font-weight:600;margin-bottom:4px}
 img{width:100%;border-radius:9px;border:1px solid var(--line);display:block}
 
@@ -553,53 +558,247 @@ footer{margin:48px 0 52px;padding-top:20px;border-top:3px double var(--ink);
 footer b{color:var(--ink)}
 """
 
-def metrics_table(results: dict) -> str:
-    # '훈련 성공률'을 '성공률(방향)'(=테스트) 바로 앞에 배치해 둘을 나란히 비교.
-    keys   = ["R²", "RMSE(%)", "MAE(%)", "상관계수", "훈련 성공률", "성공률(방향)"]
-    mcls   = {"Model A (PC1)": "ma", "Model B (잔차3개)": "mb", "Model C (전체)": "mc"}
-    head   = "<th>모델</th>" + "".join(f"<th>{k}</th>" for k in keys)
-    rows   = ""
+# def metrics_table(results: dict) -> str: #**원본**
+#     # '훈련 성공률'을 '성공률(방향)'(=테스트) 바로 앞에 배치해 둘을 나란히 비교.
+#     keys   = ["R²", "RMSE(%)", "MAE(%)", "상관계수", "훈련 성공률", "성공률(방향)"]
+#     mcls   = {"Model A (PC1)": "ma", "Model B (잔차3개)": "mb", "Model C (전체)": "mc"}
+#     head   = "<th>모델</th>" + "".join(f"<th>{k}</th>" for k in keys)
+#     rows   = ""
 
-    # 최고 성공률 찾기
+#     # 최고 성공률 찾기
+#     best_acc = max(
+#         (r["성공률(방향)"] for r in results.values() if r and "성공률(방향)" in r),
+#         default=None,
+#     )
+
+#     for mname, r in results.items():
+#         if r is None:
+#             rows += f'<tr><td class="mn {mcls.get(mname,"")}">{mname}</td>' \
+#                     + "<td colspan='6' style='color:#aaa'>데이터 부족</td></tr>"
+#             continue
+#         cells = ""
+#         for k in keys:
+#             v = r.get(k, np.nan)
+#             if pd.isna(v):
+#                 cells += "<td>-</td>"
+#             elif k == "성공률(방향)":
+#                 is_best = (best_acc is not None and abs(v - best_acc) < 1e-9)
+#                 cls = ' class="best"' if is_best else ""
+#                 cells += f"<td{cls}><b>{v:.1%}</b></td>"
+#             elif k == "훈련 성공률":
+#                 # 훈련 성공률은 비교용 → best 하이라이트 없이 흐린 글씨로 표시.
+#                 cells += f"<td style='color:#9a9088'>{v:.1%}</td>"
+#             elif k == "상관계수":
+#                 cells += f"<td><b>{v:.4f}</b></td>"
+#             elif k == "R²":
+#                 cells += f"<td>{v:.4f}</td>"
+#             else:
+#                 cells += f"<td>{v:.2f}</td>"
+#         rows += (f'<tr><td class="mn {mcls.get(mname,"")}">{mname}</td>'
+#                  f'{cells}</tr>')
+
+#     return (f'<table class="mt"><thead><tr>{head}</tr></thead>'
+#             f'<tbody>{rows}</tbody></table>')
+def metrics_table(results: dict) -> str:
+    """
+    모델별 성능표를 HTML 카드형 표로 반환한다.
+    Streamlit에서는 st.components.v1.html()로 렌더링한다.
+    """
+
+    keys = ["R²", "RMSE(%)", "MAE(%)", "상관계수", "훈련 성공률", "성공률(방향)"]
+
+    model_labels = {
+        "Model A (PC1)": "Model A<br><span>PC1 통합</span>",
+        "Model B (잔차3개)": "Model B<br><span>Residual 3개</span>",
+        "Model C (전체)": "Model C<br><span>PC1 + Residual</span>",
+    }
+
+    style = """
+    <style>
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid #e3dacb;
+            border-radius: 14px;
+            padding: 14px 16px 16px 16px;
+            margin: 8px 0 18px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .metric-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2f2a25;
+            margin-bottom: 10px;
+        }
+
+        table.metric-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px solid #e7dfd2;
+            font-size: 16px;
+        }
+
+        table.metric-table th {
+            background: #f3eee5;
+            color: #2f2a25;
+            padding: 10px 12px;
+            text-align: center;
+            font-weight: 700;
+            border-bottom: 1px solid #e0d6c8;
+            white-space: nowrap;
+        }
+
+        table.metric-table td {
+            padding: 11px 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee7dd;
+            color: #332c26;
+            white-space: nowrap;
+        }
+
+        table.metric-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.metric-table tbody tr:hover {
+            background: #fbf8f1;
+        }
+
+        td.model-name {
+            font-weight: 700;
+            text-align: center;
+            background: #fcfaf6;
+            color: #26201c;
+            min-width: 120px;
+        }
+
+        td.model-name span {
+            font-size: 13px;
+            font-weight: 500;
+            color: #7a7067;
+        }
+
+        .pos {
+            background: #eaf5ef;
+            color: #1f5f4b;
+            font-weight: 700;
+        }
+
+        .neg {
+            background: #fbecea;
+            color: #8a2d24;
+            font-weight: 700;
+        }
+
+        .neutral {
+            background: #f7f4ee;
+            color: #5b524a;
+        }
+
+        .best {
+            background: #fff6d8;
+            color: #7a5600;
+            font-weight: 800;
+        }
+
+        .train {
+            background: #f7f4ee;
+            color: #8b8178;
+            font-weight: 600;
+        }
+
+        .metric-note {
+            margin-top: 10px;
+            font-size: 16px;
+            line-height: 1.55;
+            color: #6a6058;
+        }
+
+        .metric-note b {
+            color: #2f2a25;
+        }
+    </style>
+    """
+
     best_acc = max(
         (r["성공률(방향)"] for r in results.values() if r and "성공률(방향)" in r),
         default=None,
     )
 
+    head = "<th>모델</th>" + "".join(f"<th>{k}</th>" for k in keys)
+    rows = ""
+
     for mname, r in results.items():
+        display_name = model_labels.get(mname, mname)
+
         if r is None:
-            rows += f'<tr><td class="mn {mcls.get(mname,"")}">{mname}</td>' \
-                    + "<td colspan='6' style='color:#aaa'>데이터 부족</td></tr>"
+            rows += (
+                f"<tr><td class='model-name'>{display_name}</td>"
+                "<td colspan='6' class='neutral'>데이터 부족</td></tr>"
+            )
             continue
+
         cells = ""
+
         for k in keys:
             v = r.get(k, np.nan)
+
             if pd.isna(v):
-                cells += "<td>-</td>"
+                cells += "<td class='neutral'>-</td>"
+
+            elif k == "R²":
+                cls = "pos" if v >= 0 else "neg"
+                cells += f"<td class='{cls}'>{v:.4f}</td>"
+
+            elif k == "상관계수":
+                cls = "pos" if v >= 0 else "neg"
+                cells += f"<td class='{cls}'>{v:.4f}</td>"
+
             elif k == "성공률(방향)":
                 is_best = (best_acc is not None and abs(v - best_acc) < 1e-9)
-                cls = ' class="best"' if is_best else ""
-                cells += f"<td{cls}><b>{v:.1%}</b></td>"
+                if is_best:
+                    cls = "best"
+                elif v >= 0.50:
+                    cls = "pos"
+                else:
+                    cls = "neg"
+                cells += f"<td class='{cls}'>{v:.1%}</td>"
+
             elif k == "훈련 성공률":
-                # 훈련 성공률은 비교용 → best 하이라이트 없이 흐린 글씨로 표시.
-                cells += f"<td style='color:#9a9088'>{v:.1%}</td>"
-            elif k == "상관계수":
-                cells += f"<td><b>{v:.4f}</b></td>"
-            elif k == "R²":
-                cells += f"<td>{v:.4f}</td>"
-            else:
+                cells += f"<td class='train'>{v:.1%}</td>"
+
+            elif k in ["RMSE(%)", "MAE(%)"]:
                 cells += f"<td>{v:.2f}</td>"
-        rows += (f'<tr><td class="mn {mcls.get(mname,"")}">{mname}</td>'
-                 f'{cells}</tr>')
 
-    return (f'<table class="mt"><thead><tr>{head}</tr></thead>'
-            f'<tbody>{rows}</tbody></table>')
+            else:
+                cells += f"<td>{v}</td>"
 
+        rows += f"<tr><td class='model-name'>{display_name}</td>{cells}</tr>"
 
-# 참고:
-# 아래 HTML 생성부는 all_might.py를 직접 실행할 때 report.html을 만드는 보조 리포트 기능입니다.
-# 현재 Streamlit 대시보드는 dashboard.py에서 all_might의 분석 결과와 시각화 함수를 불러와 사용합니다.
-# 따라서 발표용 대시보드에는 직접 사용되지 않지만, 정적 리포트 백업 기능으로 보존합니다.
+    note = """
+    <div class="metric-note">
+        <b>훈련 성공률</b>은 마지막 학습 구간에서 모델이 방향성을 맞힌 비율이며,
+        <b>성공률(방향)</b>은 테스트 구간에서 다음 주 수익률의 상승·하락 방향을 맞힌 비율입니다.
+        두 값의 차이가 크면 과적합 가능성을 함께 점검합니다.
+    </div>
+    """
+
+    return f"""
+    {style}
+    <div class="metric-card">
+        <div class="metric-title">모델별 성능 비교</div>
+        <table class="metric-table">
+            <thead><tr>{head}</tr></thead>
+            <tbody>{rows}</tbody>
+        </table>
+        {note}
+    </div>
+    """
+
 
 
 def build_asset_section(name: str, data_tuple) -> str:
