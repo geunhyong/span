@@ -3,6 +3,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 import seaborn as sns       
+import all_might
+
 
 
 st.set_page_config(
@@ -13,17 +15,17 @@ st.set_page_config(
 
 
 
-option = st.multiselect("분석할 모델을 선택하세요", ["model_xgb","model_A", "model_B","model_C","naive_baseline","xgb_",""])
-st.write(option)
+#option = st.multiselect("분석할 모델을 선택하세요", ["model_xgb","model_A", "model_B","model_C","naive_baseline","xgb_",""])
+#st.write(option)
 
 
 
 
-with_file_objects_input = st.file_uploader("파일을 업로드하세요")
-if with_file_objects_input:
-    st.write("uploaded_file_name :" + with_file_objects_input.name)
-    file_contents = with_file_objects_input.read().decode("utf-8")
-    st.write(file_contents)
+#with_file_objects_input = st.file_uploader("파일을 업로드하세요")
+#if with_file_objects_input:
+#    st.write("uploaded_file_name :" + with_file_objects_input.name)
+#    file_contents = with_file_objects_input.read().decode("utf-8")
+#    st.write(file_contents)
 
 
 
@@ -502,3 +504,30 @@ with tabs[2]:
     # render_figure_section(context) # 만약 그래프가 figures 딕셔너리에 있다면 사용
 with tabs[3]:
     render_log_section(context)
+
+
+
+
+
+
+from tabs import data_preprocessing, sentiment_proxy, modeling_validation, performance_analysis, results_visualization
+
+
+def main():
+    st.title("주가 예측 심리지수 모델링과 평가")
+    
+    tabs = {
+        "데이터 전처리": data_preprocessing,
+        "심리지표 계산": sentiment_proxy,
+        "모델링 및 검증": modeling_validation,
+        "성능 분석": performance_analysis,
+        "결과 시각화": results_visualization,
+    }
+    
+    selected_tab = st.sidebar.selectbox("탭 선택", list(tabs.keys()))
+    tabs[selected_tab].run()  # 선택된 탭의 run 함수를 호출
+
+if __name__ == "__main__":
+    main()
+
+

@@ -4,3 +4,8 @@ numpy
 prophet
 finance-datareader
 plotly
+xgboost
+yfinance
+beautifulsoup4
+seaborn
+koreanize-matplotlib
