@@ -2,92 +2,348 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
+
+from modules.data_fetcher import get_recent_data
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_ROOT / "models"
-ASSET_NAMES = ["비트코인", "삼성전자", "코스피"]
+
+TARGET_INDICATORS = [
+    "ATR_10",
+    "MFI_10",
+    "STOCHk_10_3_3",
+]
+
+RESIDUAL_COLS = [
+    "ATR_10_res",
+    "MFI_10_res",
+    "STOCHk_10_3_3_res",
+]
+
+SENTIMENT_COL = "Investor_Sentiment_PC1"
+N_LAGS = 5
 
 
 class QuantPredictor:
     def __init__(self):
-        self.model_A = joblib.load(MODEL_DIR / "best_xgboost_panel_model_A.pkl")
-        self.model_B = joblib.load(MODEL_DIR / "best_xgboost_panel_model_B.pkl")
-        self.model_C = joblib.load(MODEL_DIR / "best_xgboost_panel_model_C.pkl")
-        self.scaler = joblib.load(MODEL_DIR / "scaler.pkl")
-        self.pca = joblib.load(MODEL_DIR / "pca.pkl")
+        self.model_A = joblib.load(
+            MODEL_DIR / "best_xgboost_panel_model_A.pkl"
+        )
+        self.model_B = joblib.load(
+            MODEL_DIR / "best_xgboost_panel_model_B.pkl"
+        )
+        self.model_C = joblib.load(
+            MODEL_DIR / "best_xgboost_panel_model_C.pkl"
+        )
+        self.scaler = joblib.load(
+            MODEL_DIR / "scaler.pkl"
+        )
+        self.pca = joblib.load(
+            MODEL_DIR / "pca.pkl"
+        )
 
-    def _extract_residuals(self, df):
-        result = df.copy()
+    def _extract_residuals(
+        self,
+        df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        삼성전자 주봉 데이터에서 RET·MOM·VOL을 계산하고,
+        ATR·MFI·Stochastic residual을 생성한다.
+        """
+        result = df.sort_index().copy()
+
         result["RET"] = result["Close"].pct_change()
-        result["MOM"] = result["RET"].shift(1).rolling(window=10).sum()
-        result["VOL"] = result["RET"].rolling(window=11).var()
 
-        control_features = ["RET", "MOM", "VOL"]
-        target_indicators = ["ATR_10", "MFI_10", "STOCHk_10_3_3"]
+        result["MOM"] = (
+            result["RET"]
+            .shift(1)
+            .rolling(window=10)
+            .sum()
+        )
 
-        clean = result.dropna(subset=control_features + target_indicators).copy()
+        result["VOL"] = (
+            result["RET"]
+            .rolling(window=11)
+            .var()
+        )
+
+        control_features = [
+            "RET",
+            "MOM",
+            "VOL",
+        ]
+
+        clean = result.dropna(
+            subset=control_features + TARGET_INDICATORS
+        ).copy()
+
         if clean.empty:
-            raise ValueError("잔차 계산에 필요한 유효 데이터가 부족합니다. 더 긴 기간의 주봉 데이터가 필요합니다.")
+            raise ValueError(
+                "잔차 계산에 필요한 유효 데이터가 부족합니다. "
+                "더 긴 기간의 주봉 데이터가 필요합니다."
+            )
 
         controls = clean[control_features]
-        for indicator in target_indicators:
+
+        for indicator in TARGET_INDICATORS:
             model = LinearRegression()
-            model.fit(controls, clean[indicator])
-            clean[f"{indicator}_res"] = clean[indicator] - model.predict(controls)
+
+            model.fit(
+                controls,
+                clean[indicator],
+            )
+
+            clean[f"{indicator}_res"] = (
+                clean[indicator]
+                - model.predict(controls)
+            )
 
         return clean
 
-    def _select_model(self, model_type: str):
+    def _select_model(
+        self,
+        model_type: str,
+    ):
         if model_type == "A":
             return self.model_A
+
         if model_type == "B":
             return self.model_B
+
         if model_type == "C":
             return self.model_C
-        raise ValueError(f"지원하지 않는 모델 타입입니다: {model_type}")
 
-    def get_prediction(self, asset_name, df_live, model_type="B"):
-        df_live = self._extract_residuals(df_live)
+        raise ValueError(
+            f"지원하지 않는 모델 타입입니다: {model_type}"
+        )
 
-        residual_cols = ["ATR_10_res", "MFI_10_res", "STOCHk_10_3_3_res"]
-        scaled_residuals = self.scaler.transform(df_live[residual_cols])
-        sentiment_score = self.pca.transform(scaled_residuals)
+    def _add_return_lags(
+        self,
+        df: pd.DataFrame,
+        prefix: str,
+    ) -> pd.DataFrame:
+        """
+        자산별 현재 주봉 종가와 과거 1~5주 로그수익률을 생성한다.
+        """
+        result = df.sort_index().copy()
 
-        mfi_idx = residual_cols.index("MFI_10_res")
-        if self.pca.components_[0][mfi_idx] < 0:
+        result[f"{prefix}_Log_Return"] = np.log(
+            result["Close"]
+            / result["Close"].shift(1)
+        )
+
+        result[f"{prefix}_Close"] = result["Close"]
+
+        for lag in range(
+            1,
+            N_LAGS + 1,
+        ):
+            result[
+                f"{prefix}_Log_Return_lag{lag}"
+            ] = result[
+                f"{prefix}_Log_Return"
+            ].shift(lag)
+
+        return result
+
+    def _align_market_learning_to_target(
+        self,
+        target_df: pd.DataFrame,
+        market_df: pd.DataFrame,
+        prefix: str,
+    ) -> pd.DataFrame:
+        """
+        KOSPI·Bitcoin의 주봉 feature를 삼성전자 기준일에 맞춘다.
+        """
+        market_features = [
+            f"{prefix}_Close",
+        ] + [
+            f"{prefix}_Log_Return_lag{i}"
+            for i in range(
+                1,
+                N_LAGS + 1,
+            )
+        ]
+
+        aligned = (
+            market_df[market_features]
+            .sort_index()
+            .reindex(
+                target_df.index,
+                method="ffill",
+            )
+        )
+
+        return aligned
+
+    def _build_live_feature_frame(
+        self,
+    ) -> pd.DataFrame:
+        """
+        삼성전자·KOSPI·Bitcoin 최근 주봉을 불러와
+        저장 모델에 입력할 실시간 feature frame을 만든다.
+        """
+        samsung_raw = get_recent_data(
+            "삼성전자"
+        )
+
+        kospi_raw = get_recent_data(
+            "코스피"
+        )
+
+        bitcoin_raw = get_recent_data(
+            "비트코인"
+        )
+
+        # -----------------------------------------------------
+        # 삼성전자 residual 및 PC1
+        # -----------------------------------------------------
+        samsung = self._extract_residuals(
+            samsung_raw
+        )
+
+        scaled_residuals = self.scaler.transform(
+            samsung[RESIDUAL_COLS]
+        )
+
+        sentiment_score = self.pca.transform(
+            scaled_residuals
+        )
+
+        mfi_index = RESIDUAL_COLS.index(
+            "MFI_10_res"
+        )
+
+        if self.pca.components_[0][mfi_index] < 0:
             sentiment_score = -sentiment_score
-        df_live["Investor_Sentiment_PC1"] = sentiment_score
 
-        df_live["Log_Return"] = np.log(df_live["Close"] / df_live["Close"].shift(1))
-        for lag in range(1, 6):
-            df_live[f"Log_Return_lag{lag}"] = df_live["Log_Return"].shift(lag)
+        samsung[SENTIMENT_COL] = sentiment_score
 
-        df_live = df_live.dropna().copy()
-        if df_live.empty:
-            raise ValueError("예측 피처 생성 후 남은 유효 데이터가 없습니다. 더 긴 기간의 주봉 데이터가 필요합니다.")
+        # -----------------------------------------------------
+        # 세 자산 공통 가격 feature
+        # -----------------------------------------------------
+        samsung = self._add_return_lags(
+            samsung,
+            "Samsung",
+        )
 
-        current_data = df_live.iloc[-1:].copy()
+        kospi = self._add_return_lags(
+            kospi_raw,
+            "KOSPI",
+        )
 
-        for name in ASSET_NAMES:
-            current_data[f"Asset_{name}"] = 1 if name == asset_name else 0
+        bitcoin = self._add_return_lags(
+            bitcoin_raw,
+            "Bitcoin",
+        )
 
-        model = self._select_model(model_type)
-        expected_cols = model.feature_names_in_
+        kospi_aligned = (
+            self._align_market_learning_to_target(
+                samsung,
+                kospi,
+                "KOSPI",
+            )
+        )
 
-        for col in expected_cols:
-            if col not in current_data.columns:
-                current_data[col] = 0
+        bitcoin_aligned = (
+            self._align_market_learning_to_target(
+                samsung,
+                bitcoin,
+                "Bitcoin",
+            )
+        )
 
-        prediction_input = current_data[expected_cols]
-        pred_log_return = float(model.predict(prediction_input)[0])
-        direction = "UP" if pred_log_return > 0 else "DOWN"
+        feature_frame = pd.concat(
+            [
+                samsung,
+                kospi_aligned,
+                bitcoin_aligned,
+            ],
+            axis=1,
+        )
+
+        feature_frame = (
+            feature_frame
+            .dropna()
+            .sort_index()
+            .copy()
+        )
+
+        if feature_frame.empty:
+            raise ValueError(
+                "예측 feature 생성 후 남은 유효 데이터가 없습니다. "
+                "더 긴 기간의 주봉 데이터가 필요합니다."
+            )
+
+        return feature_frame
+
+    def get_prediction(
+        self,
+        model_type: str = "B",
+    ) -> dict:
+        """
+        선택한 Model A/B/C로 삼성전자 다음 주 로그수익률을 예측한다.
+        """
+        feature_frame = (
+            self._build_live_feature_frame()
+        )
+
+        current_data = (
+            feature_frame
+            .iloc[-1:]
+            .copy()
+        )
+
+        model = self._select_model(
+            model_type
+        )
+
+        expected_cols = list(
+            model.feature_names_in_
+        )
+
+        missing_features = [
+            col
+            for col in expected_cols
+            if col not in current_data.columns
+        ]
+
+        if missing_features:
+            raise ValueError(
+                "최근 예측 입력에 필요한 feature가 누락되었습니다: "
+                + ", ".join(missing_features)
+            )
+
+        prediction_input = (
+            current_data[expected_cols]
+            .copy()
+        )
+
+        pred_log_return = float(
+            model.predict(
+                prediction_input
+            )[0]
+        )
+
+        direction = (
+            "UP"
+            if pred_log_return > 0
+            else "DOWN"
+        )
 
         return {
             "pred_log_return": pred_log_return,
             "direction": direction,
-            "df_plot": df_live,
-            "current_data": current_data.iloc[0].to_dict(),
-            "scaled_residuals": scaled_residuals[-1].tolist(),
+            "df_plot": feature_frame,
+            "current_data": (
+                prediction_input
+                .iloc[0]
+                .to_dict()
+            ),
+            "expected_feature_count": len(
+                expected_cols
+            ),
         }

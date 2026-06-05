@@ -1,39 +1,242 @@
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 
 from modules.data_fetcher import get_recent_data
 from utils.data_utils import validate_columns
 from visualization import plot_price_history
-
+from utils.table_utils import render_presentation_table
 
 REQUIRED_COLUMNS = ["Open", "High", "Low", "Close", "Volume"]
+CACHE_DIR = Path("data/cache")
 
+# def _load_recent_data(asset_name: str) -> pd.DataFrame:
+    # df = get_recent_data(asset_name)
+    # validate_columns(df, REQUIRED_COLUMNS)
+    # return df
+def _load_recent_data(asset_name: str, force_refresh: bool = False) -> pd.DataFrame:
+    """
+    자산별 주봉 데이터를 불러온다.
+    기본적으로 CSV 캐시가 있으면 캐시를 사용하고,
+    force_refresh=True이면 새로 수집한 뒤 CSV를 갱신한다.
+    """
+    if not force_refresh:
+        cached_df = _load_cached_data(asset_name)
+        if cached_df is not None:
+            return cached_df
 
-def _load_recent_data(asset_name: str) -> pd.DataFrame:
     df = get_recent_data(asset_name)
     validate_columns(df, REQUIRED_COLUMNS)
+    _save_cached_data(asset_name, df)
+
     return df
+
+
+# CSV 캐시   함수 3개 추가
+def _get_cache_path(asset_name: str) -> Path:
+    """
+    자산별 주봉 데이터 CSV 저장 경로를 반환한다.
+    """
+    safe_name = asset_name.replace("/", "_").replace(" ", "_")
+    return CACHE_DIR / f"{safe_name}_weekly.csv"
+
+
+def _load_cached_data(asset_name: str) -> pd.DataFrame | None:
+    """
+    저장된 CSV가 있으면 읽어온다.
+    """
+    cache_path = _get_cache_path(asset_name)
+
+    if not cache_path.exists():
+        return None
+
+    df = pd.read_csv(cache_path, index_col=0, parse_dates=True)
+    validate_columns(df, REQUIRED_COLUMNS)
+    return df
+
+
+def _save_cached_data(asset_name: str, df: pd.DataFrame) -> None:
+    """
+    수집한 주봉 데이터를 CSV로 저장한다.
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    cache_path = _get_cache_path(asset_name)
+    df.to_csv(cache_path, encoding="utf-8-sig")
+
+
+def _format_preview_table(df: pd.DataFrame, rows: int = 20) -> pd.DataFrame:
+    """
+    최근 주봉 데이터 미리보기용 표를 만든다.
+    원본 df의 index는 그래프용으로 유지하고, 
+    표에서는 날짜 의미가 보이도록 정리한다.
+    발표용 화면에서는 Open, High, Low는 제외하고
+    Close, Volume, 주요 기술지표 중심으로 보여준다.
+    """
+    preview = df.tail(rows).copy()
+
+    display_columns = [
+        "Close",
+        "Volume",
+        "ATR_10",
+        "MFI_10",
+        "STOCHk_10_3_3",
+        "STOCHd_10_3_3",
+        "Next_Return",
+    ]
+
+    available_columns = [
+        col for col in display_columns
+        if col in preview.columns
+    ]
+
+    preview = preview[available_columns]
+
+    if preview.index.name is None:
+        preview.index.name = "주봉 기준일"
+
+    return preview
+
+
+def _build_missing_table(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    결측치 개수를 발표 화면에서 읽기 쉽게 표 형태로 정리한다.
+    """
+    missing_df = (
+        df.isna()
+        .sum()
+        .rename("총 결측치 수")
+        .reset_index()
+        .rename(columns={"index": "컬럼"})
+    )
+
+    return missing_df
 
 
 def run() -> None:
     st.header("데이터 전처리")
 
+    st.info(
+        "본 탭은 사이드바에서 선택한 자산의 최근 주봉 OHLCV 데이터와 가격 흐름을 확인하는 영역입니다. "
+        "최종 모델 학습에서는 삼성전자·코스피·비트코인을 함께 포함한 패널 데이터 구조를 사용하며, "
+        "각 자산의 차이는 Asset 더미 변수로 반영됩니다."
+    )
+
     asset_name = st.session_state.get("asset_name", "삼성전자")
 
-    if st.button("최근 주봉 데이터 불러오기", type="primary"):
-        with st.spinner(f"{asset_name} 데이터를 수집하고 지표를 계산하는 중입니다."):
-            st.session_state.raw_data = _load_recent_data(asset_name)
+    st.subheader(f"{asset_name} 주봉 데이터 확인")
+    st.caption(
+        "사이드바에서 분석 대상을 선택한 뒤 아래 버튼을 누르면, "
+        "해당 자산의 최근 주봉 데이터와 가격 추이 그래프를 확인할 수 있습니다."
+    )
 
-    df = st.session_state.get("raw_data")
-    if df is None:
-        st.info("먼저 최근 주봉 데이터를 불러오세요.")
+    # 자산별 데이터 저장소 준비
+    if "raw_data_by_asset" not in st.session_state:
+        st.session_state.raw_data_by_asset = {}
+
+    load_col, refresh_col = st.columns([1, 1])
+
+    with load_col:
+        load_clicked = st.button(
+            f"{asset_name} 최근 주봉 데이터 불러오기",
+            type="primary",
+        )
+
+    with refresh_col:
+        refresh_clicked = st.button(
+            f"{asset_name} 데이터 새로고침",
+        )
+
+    if load_clicked or refresh_clicked:
+        force_refresh = refresh_clicked
+
+        with st.spinner(
+            f"{asset_name} 데이터를 {'새로 수집' if force_refresh else '불러오는'} 중입니다."
+        ):
+            df_loaded = _load_recent_data(
+                asset_name,
+                force_refresh=force_refresh,
+            )
+
+            st.session_state.raw_data_by_asset[asset_name] = df_loaded
+            st.session_state.raw_data = df_loaded
+            st.session_state.loaded_asset_name = asset_name
+
+        if force_refresh:
+            st.success(f"{asset_name} 데이터를 새로 수집하고 CSV 캐시를 갱신했습니다.")
+        else:
+            st.success(f"{asset_name} 데이터를 CSV 캐시 또는 저장된 데이터에서 불러왔습니다.")
+
+    # 이미 불러온 자산이면 다시 표시
+    if asset_name in st.session_state.raw_data_by_asset:
+        df = st.session_state.raw_data_by_asset[asset_name]
+
+        # 다른 탭과 연결 유지
+        st.session_state.raw_data = df
+        st.session_state.loaded_asset_name = asset_name
+    else:
+        st.info(f"아직 {asset_name} 데이터가 없습니다. 위 버튼을 눌러 최근 주봉 데이터를 불러오세요.")
         return
 
-    st.subheader("데이터 미리보기")
-    st.dataframe(df.tail(20), width='stretch')
+    st.success(f"{asset_name} 최근 주봉 데이터가 준비되었습니다.")
 
-    st.subheader("결측치")
-    st.dataframe(df.isna().sum().rename("missing_count"), width='stretch')
+    # 기본 요약
+    start_date = df.index.min()
+    end_date = df.index.max()
 
-    st.subheader("가격 추이")
-    st.pyplot(plot_price_history(df, title=f"{asset_name} 종가 추이"))
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("데이터 개수", f"{len(df):,}개")
+
+    with col2:
+        st.metric(
+            "시작일",
+            start_date.strftime("%Y-%m-%d") if hasattr(start_date, "strftime") else str(start_date),
+        )
+
+    with col3:
+        st.metric(
+            "최근 기준일",
+            end_date.strftime("%Y-%m-%d") if hasattr(end_date, "strftime") else str(end_date),
+        )
+
+    st.subheader("최근 주봉 데이터 미리보기")
+    st.caption(
+        "아래 표는 선택 자산의 최근 20개 주봉 데이터 중 "
+        "종가(Close), 거래량(Volume), 주요 기술지표를 중심으로 정리한 미리보기입니다. "
+        "Open, High, Low는 발표 화면의 가독성을 위해 제외했습니다."
+    )
+
+    preview_df = _format_preview_table(df, rows=20)
+    st.dataframe(
+        preview_df,
+        use_container_width=True,
+        height=360,
+    )
+    st.subheader("결측치 점검")
+    st.caption(
+        "각 컬럼별 결측치 개수를 확인합니다. 결측치가 많을 경우 이후 심리지표 계산과 모델 입력값 생성에 영향을 줄 수 있습니다."
+    )
+
+    missing_df = _build_missing_table(df)
+    render_presentation_table(
+        missing_df,
+        title=f"{asset_name} 결측치 점검",
+        footnote=(
+            "각 컬럼별 결측치 개수를 확인합니다. "
+            "결측치가 많을 경우 이후 심리지표 계산과 모델 입력값 생성에 영향을 줄 수 있습니다."
+        ),
+        left_align_cols=["컬럼"],
+    )
+
+    st.subheader(f"{asset_name} 주봉 종가 추이")
+    st.caption(
+        "선택 자산의 Close 기준 주봉 가격 흐름입니다. "
+        "이 그래프는 이후 로그수익률, residual, Investor Sentiment 계산의 기초 가격 흐름을 확인하기 위한 시각화입니다."
+    )
+
+    st.pyplot(
+        plot_price_history(df, title=f"{asset_name} 주봉 종가 추이"),
+        use_container_width=True,
+    )

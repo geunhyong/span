@@ -5,12 +5,12 @@ def render_process_flow() -> None:
     st.header("프로세스 흐름")
     st.markdown(
         """
-        1. 주봉 가격 데이터 수집
+        1. 삼성전자 · 코스피 · 비트코인 주봉 가격 데이터 수집
         2. MFI, ATR, Stochastic 지표 계산
         3. 수익률, 모멘텀, 변동성으로 OLS 잔차 추출
-        4. PCA로 통합 심리지수 생성
-        5. XGBoost로 다음 주 로그수익률 예측
-        6. RMSE, MAE, R², 방향 정확도 평가
+        4. 잔차 3개를 Scaling 후 PCA로 통합 심리지수 생성
+        5. Price-only Baseline 및 XGBoost Model A/B/C 비교
+        6. 각 자산별 다음 주 로그수익률의 오차와 방향 정확도 평가
         """
     )
 
