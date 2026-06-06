@@ -1,0 +1,6 @@
+﻿Model,Feature_Set,Feature_Count,Purpose
+Naive Baseline,Predicted return = 0,0,가장 단순한 기준선
+Price-only Baseline,Log_Return_lag1~5 + Asset dummies,8,심리 proxy 없는 기준선
+Model A,Price lags + Asset dummies + PC1,9,통합 심리지수 효과 확인
+Model B,Price lags + Asset dummies + residual 3개,11,개별 residual 효과 확인
+Model C,Price lags + Asset dummies + PC1 + residual 3개,12,결합 효과 확인
