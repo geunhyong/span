@@ -10,7 +10,7 @@ def render_introduction():
     - **대상**: Samsung Electronics (005930.KS)
     - **기간**: 2020-05-25 ~ 2026-05-25 (주간 데이터)
     
-    ### 🔬 방법론
+    ### 🔬 실험도구
     - **기술 지표**: ATR_10, MFI_10, STOCHk_10_3_3
     - **심리지수**: OLS 잔차 기반 + PCA (설명력 77.81%)
     - **모델**: XGBoost (n_estimators=200, max_depth=5)
