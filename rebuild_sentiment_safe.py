@@ -1,4 +1,4 @@
-(env) PS C:\Users\user\AI_Quant_Season3_Kwon_clean> python -c "
+
 with open('log/introduction.py', 'w', encoding='utf-8') as f:
     f.write('''import streamlit as st
 
@@ -39,4 +39,4 @@ def render_introduction():
         st.metric('Models', '3')
 ''')
 print('✅ introduction.py 완성!')
-"
+

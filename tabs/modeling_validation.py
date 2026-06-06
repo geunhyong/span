@@ -8,6 +8,12 @@ from modules.predictor import QuantPredictor
 from visualization import plot_price_history, plot_sentiment_index,plot_correlation_heatmap, plot_directional_accuracy_bar,plot_actual_vs_prediction_series, plot_actual_vs_predicted_scatter
 from utils.table_utils import render_presentation_table     
 import streamlit.components.v1 as components
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import joblib
+
+
 
 MODEL_FILES = {
     "Model A": Path("models/best_xgboost_panel_model_A.pkl"),
@@ -329,8 +335,137 @@ def _format_performance_table(performance_df: pd.DataFrame) -> pd.DataFrame:
 
     return display_df
 
+# 모델의 입력 feature 
+# Feature importance 표와 그룸 요약 함수 추가 
+def _build_feature_importance_df(
+    model_choice: str,
+) -> pd.DataFrame:
+    """
+    저장된 XGBoost 모델의 gain 기반 feature importance를
+    발표용 표 형태로 구성한다.
+    """
+    model_label = f"Model {model_choice}"
+    model_path = MODEL_FILES[model_label]
+    model = joblib.load(model_path)
+
+    importance_df = pd.DataFrame(
+        {
+            "Feature": model.feature_names_in_,
+            "Importance": model.feature_importances_,
+        }
+    )
+
+    def classify_feature(feature_name: str) -> str:
+        if feature_name == "Investor_Sentiment_PC1":
+            return "통합 심리 proxy"
+
+        if feature_name in {
+            "ATR_10_res",
+            "MFI_10_res",
+            "STOCHk_10_3_3_res",
+        }:
+            return "개별 심리 proxy"
+
+        if feature_name.startswith("Samsung_"):
+            return "삼성전자 가격 입력"
+
+        if feature_name.startswith("KOSPI_"):
+            return "KOSPI 보조 입력"
+
+        if feature_name.startswith("Bitcoin_"):
+            return "Bitcoin 보조 입력"
+
+        return "기타"
+
+    importance_df["Feature_Group"] = importance_df[
+        "Feature"
+    ].apply(classify_feature)
+
+    importance_df["Importance_Percent"] = (
+        importance_df["Importance"] * 100
+    )
+
+    importance_df["Used"] = importance_df[
+        "Importance"
+    ].map(
+        lambda value: (
+            "사용됨"
+            if value > 0
+            else "사용되지 않음"
+        )
+    )
+
+    return importance_df.sort_values(
+        "Importance",
+        ascending=False,
+    ).reset_index(drop=True)
 
 
+def _build_feature_group_summary(
+    importance_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    feature importance를 역할별로 합산한다.
+    """
+    summary_df = (
+        importance_df
+        .groupby(
+            "Feature_Group",
+            as_index=False,
+        )["Importance_Percent"]
+        .sum()
+        .sort_values(
+            "Importance_Percent",
+            ascending=False,
+        )
+        .reset_index(drop=True)
+    )
+
+    summary_df["Importance_Percent"] = summary_df[
+        "Importance_Percent"
+    ].map(
+        lambda value: f"{value:.2f}%"
+    )
+
+    summary_df = summary_df.rename(
+        columns={
+            "Feature_Group": "입력 그룹",
+            "Importance_Percent": "상대 중요도",
+        }
+    )
+
+    return summary_df
+
+
+def _format_feature_importance_table(
+    importance_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    개별 feature importance를 대시보드 표시용으로 변환한다.
+    """
+    display_df = importance_df[
+        [
+            "Feature",
+            "Feature_Group",
+            "Importance_Percent",
+            "Used",
+        ]
+    ].copy()
+
+    display_df["Importance_Percent"] = display_df[
+        "Importance_Percent"
+    ].map(
+        lambda value: f"{value:.2f}%"
+    )
+
+    return display_df.rename(
+        columns={
+            "Feature": "Feature",
+            "Feature_Group": "입력 구분",
+            "Importance_Percent": "상대 중요도",
+            "Used": "모델 사용 여부",
+        }
+    )
 
 def _build_direction_match_preview(
     prediction_df: pd.DataFrame,
@@ -866,23 +1001,93 @@ def run() -> None:
             f"{selected_info['purpose']}"
         )
 
+    with purpose_col:
+        st.info(
+            f"**비교 목적**\n\n"
+            f"{selected_info['purpose']}"
+        )
+
+            
+    # 선택 모델 Feature Importance
+   
+    importance_df = _build_feature_importance_df(
+        model_choice
+    )
+
+    group_summary_df = _build_feature_group_summary(
+        importance_df
+    )
+
+    importance_display_df = (
+        _format_feature_importance_table(
+            importance_df
+        )
+    )
+
+    add_vertical_space(32)
+
+    st.subheader(
+        f"Model {model_choice} 입력 feature 중요도"
+    )
+
+    st.caption(
+        "아래 중요도는 XGBoost 트리 분할 과정에서 "
+        "각 feature가 오차 감소에 기여한 상대적 비중입니다. "
+        "예측값 자체를 단순 비율로 분해한 값은 아닙니다."
+    )
+
+    render_presentation_table(
+        group_summary_df,
+        title="입력 그룹별 상대 중요도",
+        footnote=(
+            "삼성전자 가격 입력, KOSPI·Bitcoin 보조 입력, "
+            "심리 proxy feature의 gain 기반 중요도를 "
+            "그룹별로 합산한 결과입니다."
+        ),
+        left_align_cols=["입력 그룹"],
+        height=360,
+    )
+
+    with st.expander(
+        "개별 feature 중요도 상세 보기",
+        expanded=False,
+    ):
+        render_presentation_table(
+            importance_display_df,
+            title=f"Model {model_choice} 개별 feature 중요도",
+            footnote=(
+                "중요도가 0인 feature는 현재 학습된 "
+                "XGBoost 트리 분할에 사용되지 않은 변수입니다."
+            ),
+            left_align_cols=[
+                "Feature",
+                "입력 구분",
+                "모델 사용 여부",
+            ],
+            height=900,
+        )
+
     st.caption(
         "모델 선택을 변경한 뒤에는 아래의 '저장된 모델로 예측 실행' 버튼을 다시 눌러야 "
         "선택 모델 기준의 예측 결과가 화면에 반영됩니다."
     )
 
-    # 최종 예측 대상은 삼성전자로 고정한다.
+
+
+    # 최종 예측 출력 대상은 삼성전자로 고정한다.
     asset_name = "삼성전자"
 
     if st.button("저장된 모델로 예측 실행", type="primary"):
-        with st.spinner(f"{asset_name} 최근 데이터를 준비하고 Model {model_choice}로 예측하는 중입니다."):
+        with st.spinner(
+            f"{asset_name} 최근 시장 데이터를 준비하고 "
+            f"Model {model_choice}로 예측하는 중입니다."
+        ):
             predictor = load_predictor()
-            raw_data = load_input_data(asset_name)
+
             st.session_state.prediction_result = predictor.get_prediction(
-                asset_name=asset_name,
-                raw_data=raw_data,
                 model_type=model_choice,
             )
+
             st.session_state.prediction_model_choice = model_choice
 
     result = st.session_state.get("prediction_result")
