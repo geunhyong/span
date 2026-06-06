@@ -56,37 +56,49 @@ def initialize_session_state() -> None:
 # =========================================================
 # 사이드바
 # =========================================================
-def render_sidebar() -> None:
+def render_default_sidebar() -> None:
     """
-    삼성전자·KOSPI·Bitcoin 중 불러올 주봉 데이터를 선택한다.
-
-    이 선택은 데이터 전처리 및 심리지표 확인을 위한 것이며,
-    최종 모델의 예측 대상은 삼성전자로 고정한다.
+    프로젝트 소개·데이터 전처리·심리지표 탭에서 사용하는
+    기존 자산 선택 사이드바입니다.
     """
     st.sidebar.header("주봉 데이터 준비")
 
-    current_asset = st.session_state.get(
-        "asset_name",
-        PREDICTION_TARGET,
-    )
-
-    if current_asset not in DATA_ASSETS:
-        current_asset = PREDICTION_TARGET
-        st.session_state.asset_name = current_asset
-
-    st.sidebar.selectbox(
+    asset_name = st.sidebar.selectbox(
         "불러올 주봉 데이터",
-        options=DATA_ASSETS,
-        index=DATA_ASSETS.index(current_asset),
-        key="asset_name",
-        help=(
-            "데이터 전처리와 심리지표 계산에 사용할 "
-            "주봉 데이터를 선택합니다."
-        ),
+        options=[
+            "삼성전자",
+            "코스피",
+            "비트코인",
+        ],
+        key="sidebar_asset_name",
+    )
+
+    st.session_state.asset_name = asset_name
+
+    st.sidebar.caption(
+        "선택한 자산의 주봉 데이터와 기술지표 계산 결과를 확인합니다."
     )
 
 
+def render_modeling_sidebar() -> None:
+    """
+    모델링/검증 탭에서만 사용하는 고정 안내 사이드바입니다.
+    """
+    st.session_state.asset_name = "삼성전자"
 
+    st.sidebar.header("분석 대상")
+
+    st.sidebar.markdown("**최종 예측 대상**")
+    st.sidebar.markdown("### 삼성전자")
+
+    st.sidebar.markdown("**시장 보조 입력**")
+    st.sidebar.write("KOSPI · Bitcoin")
+
+    st.sidebar.caption(
+        "삼성전자의 다음 주 로그수익률 방향을 예측하며, "
+        "KOSPI와 Bitcoin은 시장 흐름을 반영하는 "
+        "보조 입력자료로 사용합니다."
+    )
 
 # =========================================================
 # 대시보드 상단
@@ -166,7 +178,6 @@ def render_experiment_summary() -> None:
 # =========================================================
 def main() -> None:
     initialize_session_state()
-    render_sidebar()
     render_dashboard_header()
 
     overview_tab, data_tab, sentiment_tab, modeling_tab = st.tabs(
@@ -175,12 +186,18 @@ def main() -> None:
             "데이터 전처리",
             "심리지표",
             "모델링/검증",
-        ]
+        ],
+        key="dashboard_tabs",
+        on_change="rerun",
     )
 
     # -----------------------------------------------------
     # 프로젝트 소개
     # -----------------------------------------------------
+    if modeling_tab.open:
+        render_modeling_sidebar()
+    else:
+        render_default_sidebar()
     with overview_tab:
         render_introduction()
 

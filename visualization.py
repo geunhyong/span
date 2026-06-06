@@ -1,8 +1,46 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import platform
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
 from utils.plotting_utils import COLORS, new_figure, style_axis
+
+
+def configure_korean_font() -> None:
+    """
+    실행 환경에서 사용할 수 있는 한글 폰트를 찾아
+    Matplotlib 전체 그래프에 적용한다.
+    """
+    available_fonts = {
+        font.name
+        for font in font_manager.fontManager.ttflist
+    }
+
+    candidate_fonts = [
+        "Malgun Gothic",
+        "AppleGothic",
+        "Noto Sans CJK KR",
+        "Noto Sans KR",
+        "NanumGothic",
+    ]
+
+    selected_font = next(
+        (
+            font_name
+            for font_name in candidate_fonts
+            if font_name in available_fonts
+        ),
+        None,
+    )
+
+    if selected_font is not None:
+        plt.rcParams["font.family"] = selected_font
+
+    plt.rcParams["axes.unicode_minus"] = False
+
+
+configure_korean_font()
 
 
 def plot_price_history(df: pd.DataFrame, title: str = "Price History"):

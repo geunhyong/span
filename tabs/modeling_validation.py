@@ -325,7 +325,7 @@ def _format_performance_table(performance_df: pd.DataFrame) -> pd.DataFrame:
         display_df["방향 정확도"] = pd.to_numeric(
             display_df["방향 정확도"],
             errors="coerce",
-        ).map(lambda value: "-" if pd.isna(value) else f"{value:.2f}%")
+        ).map(lambda value: "-" if pd.isna(value) else f"{value:.4f}%")
 
     if "feature 수" in display_df.columns:
         display_df["feature 수"] = pd.to_numeric(
@@ -333,7 +333,39 @@ def _format_performance_table(performance_df: pd.DataFrame) -> pd.DataFrame:
             errors="coerce",
         ).map(lambda value: "-" if pd.isna(value) else f"{int(value)}개")
 
+
+    percentage_columns = [
+        "Up_DA",
+        "Down_DA",
+        "Pred_Up_Ratio",
+    ]
+    for col in percentage_columns:
+        if col in display_df.columns:
+            display_df[col] = pd.to_numeric(
+                display_df[col],
+                errors="coerce",
+            ).map(
+                lambda value: (
+                    "-"
+                    if pd.isna(value)
+                    else f"{value:.4f}%"
+                )
+            )
+
+    if "feature 수" in display_df.columns:
+        display_df["feature 수"] = pd.to_numeric(
+        display_df["feature 수"],
+        errors="coerce",
+    ).map(
+        lambda value: (
+            "-"
+            if pd.isna(value)
+            else f"{int(value)}개"
+        )
+    )
     return display_df
+
+
 
 # 모델의 입력 feature 
 # Feature importance 표와 그룸 요약 함수 추가 
@@ -721,7 +753,7 @@ def run() -> None:
             "모델별 추가 입력",
             "비교 목적",
         ],
-        height=540,
+        height=650,
     )
 
         # ---------------------------------------------------------
@@ -1064,7 +1096,7 @@ def run() -> None:
                 "입력 구분",
                 "모델 사용 여부",
             ],
-            height=900,
+            height=1180,
         )
 
     st.caption(
